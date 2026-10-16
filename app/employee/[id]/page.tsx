@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { sb, STATUS } from "@/lib/supabase";
+import AppShell from "@/components/AppShell";
+import PageHead from "@/components/PageHead";
 
 const F: [string, string][] = [["employee_code","รหัสพนักงาน"],["title_th","คำนำหน้า"],["first_name_th","ชื่อ"],["last_name_th","นามสกุล"],["first_name_en","First name"],["last_name_en","Last name"],["nickname","ชื่อเล่น"],["birth_date","วันเกิด"],["hire_date","วันเริ่มงาน"],["phone","โทรศัพท์"],["position","ตำแหน่ง"],["section","Section"],["cost_center","Cost center"],["emergency_name","ผู้ติดต่อฉุกเฉิน"],["emergency_phone","โทรฉุกเฉิน"]];
 
@@ -27,7 +29,7 @@ export default function Emp() {
     if (error) return setMsg("ไม่สามารถดูได้: " + error.message);
     setPii(data?.[0] ?? {}); setTimeout(() => setPii(null), 30000); };
 
-  return <main><a href="/">← กลับรายชื่อ</a><h1>{isNew ? "เพิ่มพนักงาน" : `${e.first_name_th ?? ""} ${e.last_name_th ?? ""}`}</h1>
+  return <AppShell><PageHead back={{ href: "/", label: "กลับรายชื่อ" }} title={isNew ? "เพิ่มพนักงาน" : `${e.first_name_th ?? ""} ${e.last_name_th ?? ""}`} subtitle={isNew ? undefined : e.employee_code} />
     <div className="card"><div className="grid">
       <label>สาขา<select value={e.branch_id ?? ""} onChange={x => setE({ ...e, branch_id: x.target.value })}><option value="">เลือกสาขา</option>{branches.map(b => <option key={b.id} value={b.id}>{b.clients?.name} / {b.name}</option>)}</select></label>
       <label>สถานะ<select value={e.status} onChange={x => setE({ ...e, status: x.target.value })}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
@@ -35,11 +37,11 @@ export default function Emp() {
     </div></div>
     <div className="card"><h2>ข้อมูลสำคัญ</h2>
       {!isNew && <p>เลขบัตรประชาชน: {pii ? pii.national_id : `•••••••••${e.national_id_last4 ?? ""}`} · บัญชี: {pii ? `${pii.bank_name ?? ""} ${pii.bank_account}` : `••••••${e.bank_last4 ?? ""}`}
-        {" "}{pii ? <button onClick={() => setPii(null)}>ซ่อน</button> : <button onClick={reveal}>ดูข้อมูลเต็ม (ระบบบันทึกการดู)</button>}</p>}
+        {" "}{pii ? <button className="sec" onClick={() => setPii(null)}>ซ่อน</button> : <button className="sec" onClick={reveal}>ดูข้อมูลเต็ม (ระบบบันทึกการดู)</button>}</p>}
       <div className="grid"><label>เลขบัตรประชาชน (กรอกเมื่อต้องการตั้งหรือแก้)<input inputMode="numeric" maxLength={13} value={nid} onChange={x => setNid(x.target.value)} /></label>
       <label>ธนาคาร<input value={bn} onChange={x => setBn(x.target.value)} /></label>
       <label>เลขบัญชี<input inputMode="numeric" value={bank} onChange={x => setBank(x.target.value)} /></label></div></div>
-    <button className="p" onClick={save}>บันทึก</button> <span className={msg.includes("ไม่") ? "err" : ""}>{msg}</span>
+    <button onClick={save}>บันทึก</button> <span className={msg.includes("ไม่") ? "err" : ""}>{msg}</span>
     {!!hist.length && <div className="card"><h2>ประวัติการจ้าง</h2><table><tbody>{hist.map(h => <tr key={h.id}><td>{h.effective_date}</td><td>{h.event_type}</td><td>{h.reason}</td></tr>)}</tbody></table></div>}
-  </main>;
+  </AppShell>;
 }

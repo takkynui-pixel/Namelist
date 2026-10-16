@@ -1,3 +1,23 @@
-{"name":"vta-namelist","private":true,"scripts":{"dev":"next dev","build":"next build","start":"next start"},
-"dependencies":{"next":"14.2.15","react":"18.3.1","react-dom":"18.3.1","@supabase/supabase-js":"2.45.4"},
-"devDependencies":{"typescript":"5.6.2","@types/react":"18.3.11","@types/node":"20.16.10"}}
+{
+ "name": "vta-namelist",
+ "private": true,
+ "scripts": {
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start"
+ },
+ "dependencies": {
+  "next": "14.2.15",
+  "react": "18.3.1",
+  "react-dom": "18.3.1",
+  "@supabase/supabase-js": "2.45.4",
+  "@fontsource/inter": "^5.3.0",
+  "@fontsource/noto-sans-thai": "^5.3.0",
+  "xlsx": "^0.18.5"
+ },
+ "devDependencies": {
+  "typescript": "5.6.2",
+  "@types/react": "18.3.11",
+  "@types/node": "20.16.10"
+ }
+}

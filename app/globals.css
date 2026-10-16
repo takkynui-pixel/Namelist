@@ -1,11 +1,83 @@
-body{margin:0;font-family:"Sarabun","Noto Sans Thai",sans-serif;background:#f6f7f5;color:#1d2a26}
-header{display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:#16453a;color:#fff}
-header button{color:#fff;background:none;border:0;cursor:pointer;font:inherit}
-main{max-width:1100px;margin:24px auto;padding:0 16px}
-input,select{font:inherit;padding:8px 10px;border:1px solid #b9c4bf;border-radius:6px;background:#fff;max-width:100%}
-button.p{background:#16453a;color:#fff;border:0;padding:9px 16px;border-radius:6px;cursor:pointer;font:inherit}
-button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #e0a526;outline-offset:2px}
-table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:9px 12px;border-bottom:1px solid #e2e8e5;text-align:left}
-.tbl{overflow-x:auto}.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-label{display:flex;flex-direction:column;font-size:14px;gap:4px}.err{color:#b3261e}.card{background:#fff;padding:16px;border-radius:8px;margin-bottom:16px;border:1px solid #e2e8e5}
+:root{
+  --outer:#e1e4ec; --bg:#f9fafb; --card:#fff; --navy:#1e2a52; --muted:#6f78a0; --line:#e9edf7; --pill:#f4f6fb;
+  --blue:#2b67f0; --blue-text:#1d5cf0; --blue-border:#cfe0ff; --blue-soft:#eef3ff;
+  --green-bg:#e2f4ea; --green:#1b7a4b; --amber-bg:#fff3dc; --amber:#9a5b00; --bad:#c0392b;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:'Inter','Noto Sans Thai',system-ui,sans-serif;color:var(--navy);background:var(--outer);-webkit-font-smoothing:antialiased}
+a{color:var(--blue-text);text-decoration:none} a:hover{text-decoration:underline}
+
+/* ---------- app shell ---------- */
+.outer{padding:24px}
+.shell{max-width:1400px;margin:0 auto;background:var(--bg);border-radius:40px;padding:30px 34px 40px;min-height:calc(100vh - 48px)}
+.topbar{background:#fff;border-radius:28px;padding:12px 22px;display:flex;align-items:center;gap:20px;box-shadow:0 1px 2px rgba(30,42,82,.04)}
+.logo{display:flex;align-items:center;flex:none} .logo img{height:58px;width:auto;display:block}
+.nav{display:flex;gap:10px;flex:1;justify-content:center;flex-wrap:wrap}
+.nav a{padding:10px 24px;border-radius:999px;background:var(--pill);color:var(--navy);font-weight:500;font-size:15px;white-space:nowrap}
+.nav a:hover{text-decoration:none;background:var(--blue-soft)}
+.nav a.active{background:var(--blue-soft);color:var(--blue-text);font-weight:600}
+.actions{display:flex;align-items:center;gap:12px;flex:none}
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700;font-size:20px}
+.signout{background:var(--pill);color:var(--navy);border:0;border-radius:999px;padding:10px 18px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.signout:hover{background:var(--blue-soft)}
+
+/* ---------- page ---------- */
+.page-head{margin:34px 0 22px}
+.page-head h1{font-size:44px;line-height:1.2;font-weight:700;margin:0 0 8px;letter-spacing:-.5px}
+.page-head p{margin:0;color:var(--muted);font-size:16px}
+.back{display:inline-block;margin-bottom:6px;font-size:14px;color:var(--muted)}
+.card{background:var(--card);border-radius:28px;padding:22px 30px;margin-bottom:22px;box-shadow:0 1px 2px rgba(30,42,82,.04)}
+.card h2{font-size:20px;margin:0 0 12px;font-weight:700}
+.card.flush{padding:10px 30px 14px;overflow-x:auto}
+
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:14px;font-weight:500;color:var(--muted);padding:16px 12px}
+td{padding:18px 12px;font-size:16px;border-top:1px solid var(--line);vertical-align:middle}
+tbody tr:first-child td{border-top:1px solid var(--line)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* ---------- controls ---------- */
+button,.btn{background:var(--blue);color:#fff;border:0;border-radius:999px;padding:11px 22px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;display:inline-block;text-decoration:none}
+button:hover,.btn:hover{filter:brightness(1.07);text-decoration:none}
+button.sec,.btn-outline{background:#fff;color:var(--blue-text);border:1px solid var(--blue-border);padding:9px 20px;font-weight:600}
+button.sec:hover,.btn-outline:hover{background:var(--blue-soft);filter:none}
+button:disabled{opacity:.45;cursor:default;filter:none}
+input[type=text],input[type=email],input[type=password],input[type=date],input:not([type]),input[type=file]{width:100%;padding:12px 16px;border:1px solid #dfe5f3;border-radius:16px;font:inherit;font-size:15px;color:var(--navy);background:#fff}
+input:focus{outline:2px solid var(--blue-border);border-color:var(--blue)}
+input[type=file]{padding:10px 14px}
+label{display:block;font-size:14px;font-weight:500;color:var(--muted);margin:16px 0 6px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+.badge{display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;padding:4px 14px;border-radius:999px;background:var(--green-bg);color:var(--green)}
+.badge.draft{background:var(--amber-bg);color:var(--amber)} .badge.approved{background:var(--blue-soft);color:var(--blue-text)}
+.err{color:var(--bad)} .ok{color:var(--green)} .mut{color:var(--muted);font-size:14px}
+pre{white-space:pre-wrap;font:inherit;font-size:14px;color:var(--navy);margin:14px 0 0}
+
+/* ---------- login / set-password ---------- */
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px}
+.auth-box{width:100%;max-width:420px}
+.auth-logo{display:flex;justify-content:center;margin-bottom:22px} .auth-logo img{height:64px;mix-blend-mode:multiply}
+.auth-box .card{padding:30px;border-radius:28px}
+.auth-box h1{font-size:26px;margin:0 0 6px;font-weight:700}
+
+@media (max-width:760px){
+  .outer{padding:0} .shell{border-radius:0;padding:16px 14px 32px;min-height:100vh}
+  .topbar{flex-wrap:wrap;gap:12px;border-radius:22px;padding:12px 14px}
+  .nav{order:3;flex-basis:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}
+  .nav a{padding:9px 18px} .avatar{width:44px;height:44px;font-size:17px}
+  .actions{margin-left:auto}
+  .page-head h1{font-size:30px} .card,.card.flush{padding:16px 16px;border-radius:22px}
+  td,th{padding:12px 6px;font-size:14px} td{white-space:nowrap} .logo img{height:46px}
+}
+
+/* ---------- namelist additions ---------- */
+select{width:100%;padding:12px 16px;border:1px solid #dfe5f3;border-radius:16px;font:inherit;font-size:15px;color:var(--navy);background:#fff}
+select:focus{outline:2px solid var(--blue-border);border-color:var(--blue)}
+.row select{width:auto} .row input{width:auto;flex:1;min-width:220px}
+input[type=number],input[inputmode]{width:100%;padding:12px 16px;border:1px solid #dfe5f3;border-radius:16px;font:inherit;font-size:15px}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--blue)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 14px}
+.tbl{overflow-x:auto} h1,h2{margin-top:0} small{color:var(--muted)}
+button.tab{background:var(--pill);color:var(--navy)} button.tab.on{background:var(--blue-soft);color:var(--blue-text)}
+.bar{height:10px;border-radius:999px;background:var(--pill);overflow:hidden} .bar i{display:block;height:100%;background:var(--blue)}

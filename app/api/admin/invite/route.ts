@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   const { email, full_name, role } = await req.json();
   if (!/^\S+@\S+\.\S+$/.test(email ?? "")) return NextResponse.json({ error: "อีเมลไม่ถูกต้อง" }, { status: 400 });
   if (!["admin", "multi_branch_manager", "branch_officer", "viewer"].includes(role)) return NextResponse.json({ error: "บทบาทไม่ถูกต้อง" }, { status: 400 });
-  const { data, error } = await svc.auth.admin.inviteUserByEmail(email, { data: { full_name } });
+  const { data, error } = await svc.auth.admin.inviteUserByEmail(email, { data: { full_name }, redirectTo: `${new URL(req.url).origin}/set-password` });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   await svc.from("profiles").update({ role, full_name }).eq("id", data.user.id);
   await svc.from("audit_log").insert({ user_id: u.user.id, action: "invite_user", record_id: data.user.id, detail: { email, role } });
