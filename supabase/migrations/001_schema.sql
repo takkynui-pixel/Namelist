@@ -125,7 +125,7 @@ begin
   return (11-(s%11))%10 = substr(n,13,1)::int; end $$;
 
 create function set_sensitive(p_emp uuid, p_nid text, p_bank_name text, p_bank_acct text)
-returns void language plpgsql security definer set search_path=public as $$
+returns void language plpgsql security definer set search_path=public,extensions as $$
 declare b uuid; k text:=private.pii_key();
 begin
   select branch_id into b from employees where id=p_emp;
@@ -144,7 +144,7 @@ begin
 end $$;
 
 create function reveal_sensitive(p_emp uuid) returns table(national_id text, bank_name text, bank_account text)
-language plpgsql security definer set search_path=public as $$
+language plpgsql security definer set search_path=public,extensions as $$
 declare b uuid; k text:=private.pii_key();
 begin
   select branch_id into b from employees where id=p_emp;

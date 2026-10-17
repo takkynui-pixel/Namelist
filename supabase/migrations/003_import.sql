@@ -1,6 +1,6 @@
 -- นำเข้าพนักงานจาก Excel (Admin เท่านั้น) : ไม่เขียนทับรหัสที่มีอยู่แล้ว / เข้ารหัสเลขบัตร-บัญชีในฟังก์ชัน
 create or replace function import_employees(p_rows jsonb) returns jsonb
-language plpgsql security definer set search_path=public as $$
+language plpgsql security definer set search_path=public,extensions as $$
 declare r jsonb; k text:=private.pii_key(); eid uuid; ins int:=0; skipped text[]:='{}'; nid text; ba text; br uuid;
 begin
   if not private.is_admin() then raise exception 'ต้องเป็น Admin'; end if;
