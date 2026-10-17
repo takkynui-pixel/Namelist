@@ -44,7 +44,7 @@ export default function Admin() {
     const cur = perms.find(p => p.branch_id === b);
     const next = { user_id: sel.id, branch_id: b, can_edit: false, can_view_sensitive: false, ...cur, [k]: v };
     const { error } = await sb.from("user_branches").upsert(next); error ? flash("ไม่สำเร็จ: " + error.message) : loadPerms(sel.id); };
-  const toggleAccess = async (b: string, on: boolean) => { if (on) return setPerm(b, "can_edit", false);
+  const toggleAccess = async (b: string, on: boolean) => { if (on) return setPerm(b, "can_edit", false); // on=true: ติ๊กให้เข้าถึง, false: ยกเลิก
     const { error } = await sb.from("user_branches").delete().eq("user_id", sel.id).eq("branch_id", b); error ? flash("ไม่สำเร็จ: " + error.message) : loadPerms(sel.id); };
   const addClient = async () => { const { error } = await sb.from("clients").insert({ ...nc, tax_id: nc.tax_id || null }); error ? flash("ไม่สำเร็จ: " + error.message) : (setNc({ code: "", name: "", tax_id: "" }), loadOrgs()); };
   const addBranch = async () => { const { error } = await sb.from("branches").insert({ ...nb, area: nb.area || null }); error ? flash("ไม่สำเร็จ: " + error.message) : (setNb({ ...nb, code: "", name: "", area: "" }), loadOrgs()); };
@@ -73,7 +73,7 @@ export default function Admin() {
         <div className="tbl"><table><thead><tr><th>บริษัท / สาขา</th><th>เข้าถึง</th><th>แก้ไข</th><th>ดูเลขบัตร/บัญชีเต็ม</th></tr></thead><tbody>
           {branches.map(b => { const p = perms.find(x => x.branch_id === b.id);
             return <tr key={b.id}><td>{clients.find(c => c.id === b.client_id)?.name} / {b.name}</td>
-              <td><input type="checkbox" aria-label="เข้าถึง" checked={!!p} onChange={e => toggleAccess(b.id, !e.target.checked)} /></td>
+              <td><input type="checkbox" aria-label="เข้าถึง" checked={!!p} onChange={e => toggleAccess(b.id, e.target.checked)} /></td>
               <td><input type="checkbox" aria-label="แก้ไข" disabled={!p} checked={!!p?.can_edit} onChange={e => setPerm(b.id, "can_edit", e.target.checked)} /></td>
               <td><input type="checkbox" aria-label="ดูข้อมูลเต็ม" disabled={!p} checked={!!p?.can_view_sensitive} onChange={e => setPerm(b.id, "can_view_sensitive", e.target.checked)} /></td></tr>; })}
         </tbody></table></div></div>}
