@@ -18,6 +18,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <Link href="/" className="logo"><img src="/logo.png" alt="VTA Service" /></Link>
       <nav className="nav">{items.map(i => <Link key={i.href} href={i.href} className={on(i.href) ? "active" : ""}>{i.label}</Link>)}</nav>
       <div className="actions">
+        <Link href="/set-password" className="signout" style={{ textDecoration: "none" }}>เปลี่ยนรหัสผ่าน</Link>
         <button className="signout" onClick={async () => { await sb.auth.signOut(); window.location.href = "/login"; }}>ออกจากระบบ</button>
         <div className="avatar" title={email}>{(email[0] ?? "U").toUpperCase()}</div>
       </div>

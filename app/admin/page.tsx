@@ -12,6 +12,7 @@ export default function Admin() {
   const [users, setUsers] = useState<any[]>([]), [clients, setClients] = useState<any[]>([]), [branches, setBranches] = useState<any[]>([]);
   const [perms, setPerms] = useState<any[]>([]), [sel, setSel] = useState<any>(null), [logs, setLogs] = useState<any[]>([]);
   const [inv, setInv] = useState({ email: "", full_name: "", role: "viewer" });
+  const [pwFor, setPwFor] = useState<any>(null), [pw, setPw] = useState("");
   const [nc, setNc] = useState({ code: "", name: "", tax_id: "" }), [nb, setNb] = useState({ client_id: "", code: "", name: "", area: "" });
 
   const loadUsers = () => sb.from("profiles").select("*").order("full_name").then(({ data }) => setUsers(data ?? []));
@@ -29,6 +30,13 @@ export default function Admin() {
   if (!ok) return <AppShell><p className="err">หน้านี้สำหรับ Admin เท่านั้น</p></AppShell>;
 
   const upd = async (id: string, patch: any) => { const { error } = await sb.from("profiles").update(patch).eq("id", id); error ? flash("ไม่สำเร็จ: " + error.message) : (flash("บันทึกแล้ว"), loadUsers()); };
+  const act = async (body: any) => { const { data: s } = await sb.auth.getSession();
+    const r = await fetch("/api/admin/user-action", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${s.session?.access_token}` }, body: JSON.stringify(body) });
+    return { ok: r.ok, j: await r.json() }; };
+  const sendReset = async (u: any) => { const x = await act({ user_id: u.id, action: "send_reset" }); flash(x.ok ? `ส่งลิงก์ตั้งรหัสผ่านไปที่ ${u.email} แล้ว` : "ไม่สำเร็จ: " + x.j.error); };
+  const savePw = async () => { const x = await act({ user_id: pwFor.id, action: "set_password", password: pw });
+    if (x.ok) { flash("ตั้งรหัสผ่านแล้ว แจ้งผู้ใช้ให้เข้าสู่ระบบและเปลี่ยนรหัสเอง"); setPwFor(null); setPw(""); } else flash("ไม่สำเร็จ: " + x.j.error); };
+  const gen = () => { const c = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"; setPw([...crypto.getRandomValues(new Uint32Array(12))].map(n => c[n % c.length]).join("") + "#7"); };
   const invite = async () => { const { data: s } = await sb.auth.getSession();
     const r = await fetch("/api/admin/invite", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${s.session?.access_token}` }, body: JSON.stringify(inv) });
     const j = await r.json(); if (!r.ok) return flash("ไม่สำเร็จ: " + j.error); flash("ส่งคำเชิญทางอีเมลแล้ว"); setInv({ email: "", full_name: "", role: "viewer" }); loadUsers(); };
@@ -56,7 +64,10 @@ export default function Admin() {
         {users.map(u => <tr key={u.id}><td>{u.full_name}<br /><small>{u.email}</small></td>
           <td><select value={u.role} onChange={e => upd(u.id, { role: e.target.value })}>{Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
           <td><input type="checkbox" checked={u.active} aria-label="เปิดใช้งานบัญชี" onChange={e => upd(u.id, { active: e.target.checked })} /></td>
-          <td><button className="sec" onClick={() => { setSel(u); loadPerms(u.id); }}>กำหนดสาขา</button></td></tr>)}</tbody></table></div>
+          <td><div className="row" style={{ marginBottom: 0 }}><button className="sec" onClick={() => { setSel(u); loadPerms(u.id); }}>กำหนดสาขา</button><button className="sec" onClick={() => sendReset(u)}>ส่งลิงก์ตั้งรหัสผ่าน</button><button className="sec" onClick={() => { setPwFor(u); setPw(""); }}>ตั้งรหัสผ่าน</button></div></td></tr>)}</tbody></table></div>
+      {pwFor && <div className="card"><h2>ตั้งรหัสผ่านให้ {pwFor.full_name ?? pwFor.email}</h2>
+        <div className="row"><input value={pw} onChange={e => setPw(e.target.value)} placeholder="อย่างน้อย 10 ตัวอักษร" autoComplete="off" /><button className="sec" onClick={gen}>สุ่มรหัส</button><button onClick={savePw}>บันทึกรหัสผ่าน</button><button className="sec" onClick={() => setPwFor(null)}>ยกเลิก</button></div>
+        <p className="mut" style={{ margin: 0 }}>ส่งรหัสให้ผู้ใช้ทางช่องทางส่วนตัว และให้เปลี่ยนรหัสเองหลังเข้าสู่ระบบ (เมนู "เปลี่ยนรหัสผ่าน")</p></div>}
       {sel && <div className="card"><h2>สิทธิ์รายสาขา: {sel.full_name ?? sel.email}</h2>
         {sel.role === "admin" ? <p>Admin เห็นและแก้ไขได้ทุกสาขาอยู่แล้ว</p> : sel.role === "viewer" && <p><small>บทบาท "ดูอย่างเดียว" จะแก้ไขไม่ได้ แม้ติ๊กสิทธิ์แก้ไข</small></p>}
         <div className="tbl"><table><thead><tr><th>บริษัท / สาขา</th><th>เข้าถึง</th><th>แก้ไข</th><th>ดูเลขบัตร/บัญชีเต็ม</th></tr></thead><tbody>
