@@ -11,8 +11,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (!data.user) { window.location.href = "/login"; return; }
     setEmail(data.user.email ?? "");
     const { data: p } = await sb.from("profiles").select("role").eq("id", data.user.id).single(); setRole(p?.role ?? ""); }); }, []);
-  const items = [{ href: "/", label: "พนักงาน" }, ...(role === "admin" ? [{ href: "/import", label: "นำเข้าจาก Excel" }, { href: "/admin", label: "จัดการระบบ" }] : [])];
-  const on = (h: string) => (h === "/" ? path === "/" || path.startsWith("/employee") : path === h);
+  const items = [{ href: "/", label: "พนักงาน" }, { href: "/companies", label: "บริษัท" }, ...(role === "admin" ? [{ href: "/import", label: "นำเข้าจาก Excel" }, { href: "/admin", label: "จัดการระบบ" }] : [])];
+  const on = (h: string) => (h === "/" ? path === "/" || path.startsWith("/employee") : h === "/companies" ? path.startsWith("/companies") : path === h);
   return <div className="outer"><div className="shell">
     <header className="topbar">
       <Link href="/" className="logo"><img src="/logo.png" alt="VTA Service" /></Link>

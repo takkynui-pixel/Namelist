@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { sb, STATUS } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
 import PageHead from "@/components/PageHead";
+import FilesPanel from "@/components/FilesPanel";
 
 const F: [string, string][] = [["employee_code","รหัสพนักงาน"],["title_th","คำนำหน้า"],["first_name_th","ชื่อ"],["last_name_th","นามสกุล"],["first_name_en","First name"],["last_name_en","Last name"],["nickname","ชื่อเล่น"],["birth_date","วันเกิด"],["hire_date","วันเริ่มงาน"],["phone","โทรศัพท์"],["position","ตำแหน่ง"],["section","Section"],["cost_center","Cost center"],["emergency_name","ผู้ติดต่อฉุกเฉิน"],["emergency_phone","โทรฉุกเฉิน"]];
 
@@ -43,5 +44,6 @@ export default function Emp() {
       <label>เลขบัญชี<input inputMode="numeric" value={bank} onChange={x => setBank(x.target.value)} /></label></div></div>
     <button onClick={save}>บันทึก</button> <span className={msg.includes("ไม่") ? "err" : ""}>{msg}</span>
     {!!hist.length && <div className="card"><h2>ประวัติการจ้าง</h2><table><tbody>{hist.map(h => <tr key={h.id}><td>{h.effective_date}</td><td>{h.event_type}</td><td>{h.reason}</td></tr>)}</tbody></table></div>}
+    {!isNew && e.branch_id && <FilesPanel scope="employee" ownerId={id} branchId={e.branch_id} categories={["ประวัติพนักงาน", "สัญญาจ้าง", "เอกสารส่วนตัว", "อื่นๆ"]} pdfOnly />}
   </AppShell>;
 }

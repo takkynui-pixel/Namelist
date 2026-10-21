@@ -13,6 +13,7 @@ export default function Admin() {
   const [perms, setPerms] = useState<any[]>([]), [sel, setSel] = useState<any>(null), [logs, setLogs] = useState<any[]>([]);
   const [inv, setInv] = useState({ email: "", full_name: "", role: "viewer" });
   const [pwFor, setPwFor] = useState<any>(null), [pw, setPw] = useState("");
+  const [editC, setEditC] = useState<any>(null), [editB, setEditB] = useState<any>(null);
   const [nc, setNc] = useState({ code: "", name: "", tax_id: "" }), [nb, setNb] = useState({ client_id: "", code: "", name: "", area: "" });
 
   const loadUsers = () => sb.from("profiles").select("*").order("full_name").then(({ data }) => setUsers(data ?? []));
@@ -20,6 +21,7 @@ export default function Admin() {
   const loadPerms = async (uid: string) => setPerms((await sb.from("user_branches").select("*").eq("user_id", uid)).data ?? []);
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(""), 4000); };
 
+  useEffect(() => { if (new URLSearchParams(window.location.search).get("tab") === "orgs") setTab("orgs"); }, []);
   useEffect(() => { sb.auth.getUser().then(async ({ data }) => {
     if (!data.user) return setOk(false);
     const { data: p } = await sb.from("profiles").select("role").eq("id", data.user.id).single();
@@ -37,6 +39,12 @@ export default function Admin() {
   const savePw = async () => { const x = await act({ user_id: pwFor.id, action: "set_password", password: pw });
     if (x.ok) { flash("ตั้งรหัสผ่านแล้ว แจ้งผู้ใช้ให้เข้าสู่ระบบและเปลี่ยนรหัสเอง"); setPwFor(null); setPw(""); } else flash("ไม่สำเร็จ: " + x.j.error); };
   const gen = () => { const c = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"; setPw([...crypto.getRandomValues(new Uint32Array(12))].map(n => c[n % c.length]).join("") + "#7"); };
+  const saveC = async () => { const c = editC; if (!c.code?.trim() || !c.name?.trim()) return flash("กรอกรหัสและชื่อบริษัท");
+    const { error } = await sb.from("clients").update({ code: c.code.trim(), name: c.name.trim(), tax_id: c.tax_id || null, pay_cycle: c.pay_cycle || null, pay_date: c.pay_date || null, address: c.address || null, active: !!c.active }).eq("id", c.id);
+    error ? flash("ไม่สำเร็จ: " + error.message) : (flash("บันทึกบริษัทแล้ว"), setEditC(null), loadOrgs()); };
+  const saveB = async () => { const b = editB; if (!b.code?.trim() || !b.name?.trim() || !b.client_id) return flash("กรอกบริษัท รหัส และชื่อสาขา");
+    const { error } = await sb.from("branches").update({ client_id: b.client_id, code: b.code.trim(), name: b.name.trim(), area: b.area || null, active: !!b.active }).eq("id", b.id);
+    error ? flash("ไม่สำเร็จ: " + (error.message.includes("duplicate") ? "รหัสสาขานี้มีอยู่แล้วในบริษัทเดียวกัน" : error.message)) : (flash("บันทึกสาขาแล้ว"), setEditB(null), loadOrgs()); };
   const invite = async () => { const { data: s } = await sb.auth.getSession();
     const r = await fetch("/api/admin/invite", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${s.session?.access_token}` }, body: JSON.stringify(inv) });
     const j = await r.json(); if (!r.ok) return flash("ไม่สำเร็จ: " + j.error); flash("ส่งคำเชิญทางอีเมลแล้ว"); setInv({ email: "", full_name: "", role: "viewer" }); loadUsers(); };
@@ -80,6 +88,23 @@ export default function Admin() {
     </>}
 
     {tab === "orgs" && <>
+      {editC && <div className="card"><h2>แก้ไขบริษัท</h2><div className="grid">
+        <label>รหัส<input value={editC.code ?? ""} onChange={e => setEditC({ ...editC, code: e.target.value })} /></label>
+        <label>ชื่อบริษัท<input value={editC.name ?? ""} onChange={e => setEditC({ ...editC, name: e.target.value })} /></label>
+        <label>เลขผู้เสียภาษี<input value={editC.tax_id ?? ""} onChange={e => setEditC({ ...editC, tax_id: e.target.value })} /></label>
+        <label>รอบจ่ายค่าจ้าง<input value={editC.pay_cycle ?? ""} onChange={e => setEditC({ ...editC, pay_cycle: e.target.value })} /></label>
+        <label>วันจ่าย<input value={editC.pay_date ?? ""} onChange={e => setEditC({ ...editC, pay_date: e.target.value })} /></label>
+        <label>ที่อยู่<input value={editC.address ?? ""} onChange={e => setEditC({ ...editC, address: e.target.value })} /></label></div>
+        <label style={{ flexDirection: "row", gap: 8, alignItems: "center" }}><input type="checkbox" checked={!!editC.active} onChange={e => setEditC({ ...editC, active: e.target.checked })} /> เปิดใช้งานบริษัท</label>
+        <div className="row"><button onClick={saveC}>บันทึก</button><button className="sec" onClick={() => setEditC(null)}>ยกเลิก</button></div></div>}
+      {editB && <div className="card"><h2>แก้ไขสาขา</h2><div className="grid">
+        <label>บริษัท<select value={editB.client_id} onChange={e => setEditB({ ...editB, client_id: e.target.value })}>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        <label>รหัสสาขา<input value={editB.code ?? ""} onChange={e => setEditB({ ...editB, code: e.target.value })} /></label>
+        <label>ชื่อสาขา<input value={editB.name ?? ""} onChange={e => setEditB({ ...editB, name: e.target.value })} /></label>
+        <label>พื้นที่<input value={editB.area ?? ""} onChange={e => setEditB({ ...editB, area: e.target.value })} /></label></div>
+        <label style={{ flexDirection: "row", gap: 8, alignItems: "center" }}><input type="checkbox" checked={!!editB.active} onChange={e => setEditB({ ...editB, active: e.target.checked })} /> เปิดใช้งานสาขา</label>
+        <p className="mut">การย้ายสาขาไปบริษัทอื่นจะเปลี่ยนบริษัทของพนักงานในสาขานี้ทั้งหมดและสิทธิ์เข้าถึงเอกสารบริษัทตามไปด้วย</p>
+        <div className="row"><button onClick={saveB}>บันทึก</button><button className="sec" onClick={() => setEditB(null)}>ยกเลิก</button></div></div>}
       <div className="card"><h2>เพิ่มบริษัทลูกค้า</h2><div className="grid">
         <label>รหัส<input value={nc.code} onChange={e => setNc({ ...nc, code: e.target.value })} /></label>
         <label>ชื่อบริษัท<input value={nc.name} onChange={e => setNc({ ...nc, name: e.target.value })} /></label>
@@ -91,8 +116,12 @@ export default function Admin() {
         <label>ชื่อสาขา<input value={nb.name} onChange={e => setNb({ ...nb, name: e.target.value })} /></label>
         <label>พื้นที่<input value={nb.area} onChange={e => setNb({ ...nb, area: e.target.value })} /></label></div>
         <p><button onClick={addBranch}>เพิ่มสาขา</button></p></div>
-      <div className="tbl"><table><thead><tr><th>บริษัท</th><th>สาขา</th><th>พื้นที่</th></tr></thead><tbody>
-        {branches.map(b => <tr key={b.id}><td>{clients.find(c => c.id === b.client_id)?.name}</td><td>{b.code} {b.name}</td><td>{b.area}</td></tr>)}</tbody></table></div>
+      <h2>บริษัท</h2><div className="tbl"><table><thead><tr><th>บริษัท</th><th>เลขผู้เสียภาษี</th><th className="num">สาขา</th><th>สถานะ</th><th></th></tr></thead><tbody>
+        {clients.map(c => <tr key={c.id}><td>{c.name}<br /><small>{c.code}</small></td><td>{c.tax_id}</td><td className="num">{branches.filter(b => b.client_id === c.id).length}</td>
+          <td>{c.active ? "ใช้งาน" : "ปิด"}</td><td><div className="row" style={{ marginBottom: 0 }}><button className="sec" onClick={() => { setEditB(null); setEditC({ ...c }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>แก้ไข</button><a className="btn btn-outline" href={`/companies/${c.id}`}>เอกสาร</a></div></td></tr>)}</tbody></table></div>
+      <h2>สาขา</h2><div className="tbl"><table><thead><tr><th>บริษัท</th><th>สาขา</th><th>พื้นที่</th><th>สถานะ</th><th></th></tr></thead><tbody>
+        {branches.map(b => <tr key={b.id}><td>{clients.find(c => c.id === b.client_id)?.name}</td><td>{b.code} {b.name}</td><td>{b.area}</td><td>{b.active ? "ใช้งาน" : "ปิด"}</td>
+          <td><button className="sec" onClick={() => { setEditC(null); setEditB({ ...b }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>แก้ไข</button></td></tr>)}</tbody></table></div>
     </>}
 
     {tab === "audit" && <div className="tbl"><table><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>อ้างอิง</th></tr></thead><tbody>
