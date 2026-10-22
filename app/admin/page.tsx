@@ -38,6 +38,7 @@ export default function Admin() {
   if (ok === null) return null;
   if (!ok) return <AppShell><p className="err">หน้านี้สำหรับ Admin เท่านั้น</p></AppShell>;
 
+  const tkey = (b: any) => [b.code, b.name, b.area ?? ""].join("\u0001");
   const tplMap = new Map<string, { code: string; name: string; area: string | null; n: number }>();
   branches.forEach(b => { const k = tkey(b), t = tplMap.get(k); t ? t.n++ : tplMap.set(k, { code: b.code, name: b.name, area: b.area, n: 1 }); });
   const tplList = [...tplMap.entries()].sort((a, b) => a[1].code.localeCompare(b[1].code) || a[1].name.localeCompare(b[1].name));
@@ -86,7 +87,6 @@ export default function Admin() {
   const toggleAccess = async (b: string, on: boolean) => { if (on) return setPerm(b, "can_edit", false); // on=true: ติ๊กให้เข้าถึง, false: ยกเลิก
     const { error } = await sb.from("user_branches").delete().eq("user_id", sel.id).eq("branch_id", b); error ? flash("ไม่สำเร็จ: " + error.message) : loadPerms(sel.id); };
   const addClient = async () => { const { error } = await sb.from("clients").insert({ ...nc, tax_id: nc.tax_id || null }); error ? flash("ไม่สำเร็จ: " + error.message) : (setNc({ code: "", name: "", tax_id: "" }), loadOrgs()); };
-  const tkey = (b: any) => [b.code, b.name, b.area ?? ""].join("\u0001");
   const addBranch = async () => {
     if (!nb.client_id) return flash("เลือกบริษัทก่อน");
     const rows: any[] = [];
