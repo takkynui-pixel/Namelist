@@ -14,6 +14,7 @@ export default function Admin() {
   const [inv, setInv] = useState({ email: "", full_name: "", role: "viewer" });
   const [pwFor, setPwFor] = useState<any>(null), [pw, setPw] = useState("");
   const [editC, setEditC] = useState<any>(null), [editB, setEditB] = useState<any>(null);
+  const [pick, setPick] = useState<Set<string>>(new Set()), [look, setLook] = useState<Record<string, string>>({});
   const [nc, setNc] = useState({ code: "", name: "", tax_id: "" }), [nb, setNb] = useState({ client_id: "", code: "", name: "", area: "" });
 
   const loadUsers = () => sb.from("profiles").select("*").order("full_name").then(({ data }) => setUsers(data ?? []));
@@ -26,11 +27,41 @@ export default function Admin() {
     if (!data.user) return setOk(false);
     const { data: p } = await sb.from("profiles").select("role").eq("id", data.user.id).single();
     setOk(p?.role === "admin"); if (p?.role === "admin") { loadUsers(); loadOrgs(); } }); }, []);
-  useEffect(() => { if (ok && tab === "audit") sb.from("audit_log").select("*").order("at", { ascending: false }).limit(150).then(({ data }) => setLogs(data ?? [])); }, [tab, ok]);
+  useEffect(() => { if (!(ok && tab === "audit")) return; (async () => {
+    const { data } = await sb.from("audit_log").select("*").order("at", { ascending: false }).limit(200); const L = data ?? []; setLogs(L);
+    const ids = (acts: string[]) => [...new Set(L.filter((l: any) => acts.includes(l.action) && l.record_id).map((l: any) => l.record_id as string))];
+    const m: Record<string, string> = {}, e = ids(["reveal_sensitive", "set_sensitive"]), d = ids(["open_file", "download_file"]);
+    if (e.length) ((await sb.from("employees").select("id,employee_code,title_th,first_name_th,last_name_th").in("id", e)).data ?? []).forEach((x: any) => { m[x.id] = `${x.employee_code} ${x.title_th ?? ""}${x.first_name_th} ${x.last_name_th ?? ""}`.trim(); });
+    if (d.length) ((await sb.from("documents").select("id,title").in("id", d)).data ?? []).forEach((x: any) => { m[x.id] = x.title; });
+    setLook(m); })(); }, [tab, ok]);
 
   if (ok === null) return null;
   if (!ok) return <AppShell><p className="err">หน้านี้สำหรับ Admin เท่านั้น</p></AppShell>;
 
+  const tplMap = new Map<string, { code: string; name: string; area: string | null; n: number }>();
+  branches.forEach(b => { const k = tkey(b), t = tplMap.get(k); t ? t.n++ : tplMap.set(k, { code: b.code, name: b.name, area: b.area, n: 1 }); });
+  const tplList = [...tplMap.entries()].sort((a, b) => a[1].code.localeCompare(b[1].code) || a[1].name.localeCompare(b[1].name));
+  const ACT: Record<string, string> = { reveal_sensitive: "ดูเลขบัตรประชาชน/บัญชีธนาคารแบบเต็ม", set_sensitive: "บันทึกเลขบัตรประชาชน/บัญชีธนาคาร", import_employees: "นำเข้าพนักงานจาก Excel",
+    bulk_move: "ย้ายพนักงานหลายคนไปสาขาใหม่", perm_insert: "ให้สิทธิ์เข้าถึงสาขา", perm_update: "แก้ไขสิทธิ์รายสาขา", perm_delete: "ยกเลิกสิทธิ์เข้าถึงสาขา", invite_user: "เชิญผู้ใช้ใหม่",
+    admin_set_password: "ตั้งรหัสผ่านให้ผู้ใช้", admin_send_reset: "ส่งลิงก์ตั้งรหัสผ่านให้ผู้ใช้", open_file: "เปิดดูไฟล์แนบ", download_file: "ดาวน์โหลดไฟล์แนบ",
+    add_clients: "เพิ่มบริษัทใหม่", edit_clients: "แก้ไขข้อมูลบริษัท", add_branches: "เพิ่มสาขาใหม่", edit_branches: "แก้ไขข้อมูลสาขา", change_role: "เปลี่ยนบทบาทผู้ใช้", change_active: "เปิด/ปิดการใช้งานบัญชี" };
+  const brName = (id: string) => { const b = branches.find(x => x.id === id); return b ? `${clients.find(c => c.id === b.client_id)?.name ?? ""} / ${b.code} ${b.name}` : "(ไม่พบสาขา)"; };
+  const userName = (id: string) => { const u = users.find(x => x.id === id); return u ? (u.full_name || u.email) : (id ?? "").slice(0, 8); };
+  const describe = (l: any) => { const d = l.detail ?? {};
+    switch (l.action) {
+      case "reveal_sensitive": case "set_sensitive": return `พนักงาน ${look[l.record_id] ?? "-"}`;
+      case "import_employees": return `เพิ่ม ${d.inserted ?? 0} คน, ข้าม ${d.skipped ?? 0} รหัสที่มีอยู่แล้ว`;
+      case "bulk_move": return `ย้าย ${d.count ?? 0} คน ไปที่ ${brName(l.record_id)}`;
+      case "perm_insert": case "perm_update": return `ผู้ใช้ ${userName(l.record_id)} · ${brName(d.branch_id)} · ${d.can_edit ? "แก้ไขได้" : "ดูอย่างเดียว"}${d.can_view_sensitive ? " · ดูเลขบัตร/บัญชีเต็มได้" : ""}`;
+      case "perm_delete": return `ผู้ใช้ ${userName(l.record_id)} · ${brName(d.branch_id)}`;
+      case "invite_user": return `${d.email ?? ""} · บทบาท ${ROLES[d.role] ?? d.role ?? ""}`;
+      case "admin_set_password": case "admin_send_reset": return `ผู้ใช้ ${userName(l.record_id)}`;
+      case "open_file": case "download_file": return `ไฟล์: ${d.title ?? look[l.record_id] ?? "-"}`;
+      case "add_clients": case "edit_clients": return `บริษัท ${d.name ?? ""}`;
+      case "add_branches": case "edit_branches": return `สาขา ${d.code ?? ""} ${d.name ?? ""}${d.client_id ? " · " + (clients.find(c => c.id === d.client_id)?.name ?? "") : ""}`;
+      case "change_role": return `ผู้ใช้ ${userName(l.record_id)}: ${ROLES[d.from] ?? d.from} → ${ROLES[d.to] ?? d.to}`;
+      case "change_active": return `ผู้ใช้ ${userName(l.record_id)}: ${d.to ? "เปิดใช้งาน" : "ปิดใช้งาน"}`;
+      default: return ""; } };
   const upd = async (id: string, patch: any) => { const { error } = await sb.from("profiles").update(patch).eq("id", id); error ? flash("ไม่สำเร็จ: " + error.message) : (flash("บันทึกแล้ว"), loadUsers()); };
   const act = async (body: any) => { const { data: s } = await sb.auth.getSession();
     const r = await fetch("/api/admin/user-action", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${s.session?.access_token}` }, body: JSON.stringify(body) });
@@ -55,7 +86,15 @@ export default function Admin() {
   const toggleAccess = async (b: string, on: boolean) => { if (on) return setPerm(b, "can_edit", false); // on=true: ติ๊กให้เข้าถึง, false: ยกเลิก
     const { error } = await sb.from("user_branches").delete().eq("user_id", sel.id).eq("branch_id", b); error ? flash("ไม่สำเร็จ: " + error.message) : loadPerms(sel.id); };
   const addClient = async () => { const { error } = await sb.from("clients").insert({ ...nc, tax_id: nc.tax_id || null }); error ? flash("ไม่สำเร็จ: " + error.message) : (setNc({ code: "", name: "", tax_id: "" }), loadOrgs()); };
-  const addBranch = async () => { const { error } = await sb.from("branches").insert({ ...nb, area: nb.area || null }); error ? flash("ไม่สำเร็จ: " + error.message) : (setNb({ ...nb, code: "", name: "", area: "" }), loadOrgs()); };
+  const tkey = (b: any) => [b.code, b.name, b.area ?? ""].join("\u0001");
+  const addBranch = async () => {
+    if (!nb.client_id) return flash("เลือกบริษัทก่อน");
+    const rows: any[] = [];
+    tplList.forEach(([k, t]) => { if (pick.has(k) && !branches.some(b => b.client_id === nb.client_id && tkey(b) === k)) rows.push({ client_id: nb.client_id, code: t.code, name: t.name, area: t.area }); });
+    if (nb.code.trim() || nb.name.trim()) { if (!nb.code.trim() || !nb.name.trim()) return flash("สาขาใหม่ต้องกรอกทั้งรหัสและชื่อสาขา"); rows.push({ client_id: nb.client_id, code: nb.code.trim(), name: nb.name.trim(), area: nb.area || null }); }
+    if (!rows.length) return flash("เลือกสาขาที่มีอยู่ หรือกรอกสาขาใหม่อย่างน้อย 1 รายการ");
+    const { error } = await sb.from("branches").insert(rows);
+    error ? flash("ไม่สำเร็จ: " + (error.message.includes("duplicate") ? "มีรหัสสาขาซ้ำในบริษัทนี้" : error.message)) : (flash(`เพิ่มสาขาให้บริษัทแล้ว ${rows.length} สาขา`), setPick(new Set()), setNb({ ...nb, code: "", name: "", area: "" }), loadOrgs()); };
   const who = (id: string) => users.find(u => u.id === id)?.email ?? id?.slice(0, 8);
 
   return <AppShell><PageHead title="จัดการระบบ" subtitle="ผู้ใช้ สิทธิ์ และโครงสร้างบริษัท/สาขา" />
@@ -110,21 +149,30 @@ export default function Admin() {
         <label>ชื่อบริษัท<input value={nc.name} onChange={e => setNc({ ...nc, name: e.target.value })} /></label>
         <label>เลขผู้เสียภาษี<input value={nc.tax_id} onChange={e => setNc({ ...nc, tax_id: e.target.value })} /></label></div>
         <p><button onClick={addClient}>เพิ่มบริษัท</button></p></div>
-      <div className="card"><h2>เพิ่มสาขา</h2><div className="grid">
-        <label>บริษัท<select value={nb.client_id} onChange={e => setNb({ ...nb, client_id: e.target.value })}><option value="">เลือกบริษัท</option>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-        <label>รหัสสาขา<input value={nb.code} onChange={e => setNb({ ...nb, code: e.target.value })} /></label>
-        <label>ชื่อสาขา<input value={nb.name} onChange={e => setNb({ ...nb, name: e.target.value })} /></label>
-        <label>พื้นที่<input value={nb.area} onChange={e => setNb({ ...nb, area: e.target.value })} /></label></div>
-        <p><button onClick={addBranch}>เพิ่มสาขา</button></p></div>
+      <div className="card" id="add-branch"><h2>เพิ่มสาขาให้บริษัท</h2>
+        <label>บริษัท<select value={nb.client_id} onChange={e => { setNb({ ...nb, client_id: e.target.value }); setPick(new Set()); }}><option value="">เลือกบริษัท</option>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        {nb.client_id && <><p style={{ marginBottom: 6 }}><b>เลือกจากสาขาที่มีอยู่แล้ว</b> <small>(เลือกได้หลายสาขา)</small></p>
+          <div className="tbl" style={{ maxHeight: 280, overflowY: "auto", border: "1px solid #dfe5f3", borderRadius: 12 }}><table><tbody>
+            {tplList.map(([k, t]) => { const has = branches.some(b => b.client_id === nb.client_id && tkey(b) === k);
+              return <tr key={k}><td style={{ width: 44 }}><input type="checkbox" aria-label={`${t.code} ${t.name}`} disabled={has} checked={has || pick.has(k)} onChange={e => { const n = new Set(pick); e.target.checked ? n.add(k) : n.delete(k); setPick(n); }} /></td>
+                <td>{t.code} {t.name}{t.area ? <small> · {t.area}</small> : null}</td><td><small>{has ? "บริษัทนี้มีสาขานี้แล้ว" : `ใช้อยู่ ${t.n} บริษัท`}</small></td></tr>; })}
+            {!tplList.length && <tr><td>ยังไม่มีสาขาในระบบ ให้สร้างสาขาใหม่ด้านล่าง</td></tr>}</tbody></table></div>
+          <p style={{ marginBottom: 6 }}><b>หรือสร้างสาขาใหม่</b> <small>(เว้นว่างไว้ถ้าไม่ต้องการ)</small></p>
+          <div className="grid"><label>รหัสสาขา<input value={nb.code} onChange={e => setNb({ ...nb, code: e.target.value })} /></label>
+            <label>ชื่อสาขา<input value={nb.name} onChange={e => setNb({ ...nb, name: e.target.value })} /></label>
+            <label>พื้นที่<input value={nb.area} onChange={e => setNb({ ...nb, area: e.target.value })} /></label></div></>}
+        <p><button onClick={addBranch}>เพิ่มสาขาให้บริษัท{pick.size + (nb.code.trim() && nb.name.trim() ? 1 : 0) > 0 ? ` (${pick.size + (nb.code.trim() && nb.name.trim() ? 1 : 0)} สาขา)` : ""}</button></p></div>
       <h2>บริษัท</h2><div className="tbl"><table><thead><tr><th>บริษัท</th><th>เลขผู้เสียภาษี</th><th className="num">สาขา</th><th>สถานะ</th><th></th></tr></thead><tbody>
         {clients.map(c => <tr key={c.id}><td>{c.name}<br /><small>{c.code}</small></td><td>{c.tax_id}</td><td className="num">{branches.filter(b => b.client_id === c.id).length}</td>
-          <td>{c.active ? "ใช้งาน" : "ปิด"}</td><td><div className="row" style={{ marginBottom: 0 }}><button className="sec" onClick={() => { setEditB(null); setEditC({ ...c }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>แก้ไข</button><a className="btn btn-outline" href={`/companies/${c.id}`}>เอกสาร</a></div></td></tr>)}</tbody></table></div>
+          <td>{c.active ? "ใช้งาน" : "ปิด"}</td><td><div className="row" style={{ marginBottom: 0 }}><button className="sec" onClick={() => { setEditB(null); setEditC({ ...c }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>แก้ไข</button><button className="sec" onClick={() => { setNb({ ...nb, client_id: c.id }); setPick(new Set()); document.getElementById("add-branch")?.scrollIntoView({ behavior: "smooth" }); }}>เพิ่มสาขา</button><a className="btn btn-outline" href={`/companies/${c.id}`}>เอกสาร</a></div></td></tr>)}</tbody></table></div>
       <h2>สาขา</h2><div className="tbl"><table><thead><tr><th>บริษัท</th><th>สาขา</th><th>พื้นที่</th><th>สถานะ</th><th></th></tr></thead><tbody>
         {branches.map(b => <tr key={b.id}><td>{clients.find(c => c.id === b.client_id)?.name}</td><td>{b.code} {b.name}</td><td>{b.area}</td><td>{b.active ? "ใช้งาน" : "ปิด"}</td>
           <td><button className="sec" onClick={() => { setEditC(null); setEditB({ ...b }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>แก้ไข</button></td></tr>)}</tbody></table></div>
     </>}
 
-    {tab === "audit" && <div className="tbl"><table><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>อ้างอิง</th></tr></thead><tbody>
-      {logs.map(l => <tr key={l.id}><td>{new Date(l.at).toLocaleString("th-TH")}</td><td>{who(l.user_id)}</td><td>{l.action}</td><td><small>{l.record_id?.slice(0, 8)}</small></td></tr>)}</tbody></table></div>}
+    {tab === "audit" && <div className="tbl"><table><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>รายละเอียด</th></tr></thead><tbody>
+      {logs.map(l => <tr key={l.id}><td style={{ whiteSpace: "nowrap" }}>{new Date(l.at).toLocaleString("th-TH")}</td><td>{l.user_id ? userName(l.user_id) : "ระบบ"}</td>
+        <td>{ACT[l.action] ?? l.action}</td><td>{describe(l)}</td></tr>)}
+      {!logs.length && <tr><td colSpan={4}>ยังไม่มีประวัติ</td></tr>}</tbody></table></div>}
   </AppShell>;
 }
