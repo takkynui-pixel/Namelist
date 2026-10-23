@@ -25,7 +25,7 @@ export default function Home() {
   }, [q, st, br]);
 
   useEffect(() => {
-    filtered("id,employee_code,title_th,first_name_th,last_name_th,position,status,branches(name,clients(name))", true).range(pg * PER, pg * PER + PER - 1)
+    filtered("id,employee_code,title_th,first_name_th,last_name_th,position,status,resigned_at,resign_reason,branches(name,clients(name))", true).range(pg * PER, pg * PER + PER - 1)
       .then(({ data, count }: any) => { setRows(data ?? []); setTotal(count ?? 0); });
   }, [filtered, pg, tick]);
 
@@ -65,12 +65,12 @@ export default function Home() {
 
     <div className="card flush"><table><thead><tr>
       <th style={{ width: 44 }}><input type="checkbox" aria-label="เลือกทั้งหน้า" checked={pageAll} onChange={togglePage} /></th>
-      <th>รหัส</th><th>ชื่อ-สกุล</th><th>ตำแหน่ง</th><th>บริษัท / สาขา</th><th>สถานะ</th></tr></thead><tbody>
+      <th>รหัส</th><th>ชื่อ-สกุล</th><th>ตำแหน่ง</th><th>บริษัท / สาขา</th><th>สถานะ</th>{st === "resigned" && <><th>วันที่ลาออก</th><th>เหตุผลการลาออก</th></>}</tr></thead><tbody>
       {rows.map(r => <tr key={r.id}><td><input type="checkbox" aria-label={`เลือก ${r.employee_code}`} checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
         <td><Link href={`/employee/${r.id}`}>{r.employee_code}</Link></td>
         <td>{r.title_th}{r.first_name_th} {r.last_name_th}</td><td>{r.position}</td>
-        <td>{r.branches?.clients?.name} / {r.branches?.name}</td><td><span className={BADGE[r.status]}>{STATUS[r.status]}</span></td></tr>)}
-      {!rows.length && <tr><td colSpan={6}>ไม่พบพนักงาน หากยังไม่เห็นสาขาใดเลย ให้ติดต่อ Admin เพื่อกำหนดสิทธิ์</td></tr>}
+        <td>{r.branches?.clients?.name} / {r.branches?.name}</td><td><span className={BADGE[r.status]}>{STATUS[r.status]}</span></td>{st === "resigned" && <><td style={{ whiteSpace: "nowrap" }}>{r.resigned_at ? new Date(r.resigned_at).toLocaleDateString("th-TH") : "-"}</td><td>{r.resign_reason ?? "-"}</td></>}</tr>)}
+      {!rows.length && <tr><td colSpan={8}>ไม่พบพนักงาน หากยังไม่เห็นสาขาใดเลย ให้ติดต่อ Admin เพื่อกำหนดสิทธิ์</td></tr>}
     </tbody></table></div>
     <div className="row"><button className="sec" disabled={pg === 0} onClick={() => setPg(pg - 1)}>ก่อนหน้า</button>
       <span className="mut">หน้า {pg + 1} / {Math.max(1, Math.ceil(total / PER))}</span>

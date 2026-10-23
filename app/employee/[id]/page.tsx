@@ -19,6 +19,8 @@ export default function Emp() {
 
   const save = async () => {
     const { id: _i, created_at, updated_at, created_by, ...body } = e;
+    if (body.status !== "resigned") { body.resigned_at = null; body.resign_reason = null; }
+    else if (!body.resigned_at) return setMsg("กรอกวันที่ลาออก");
     for (const k in body) if (body[k] === "") body[k] = null;
     const r = isNew ? await sb.from("employees").insert(body).select("id").single() : await sb.from("employees").update(body).eq("id", id).select("id").single();
     if (r.error) return setMsg("บันทึกไม่สำเร็จ: " + r.error.message);
@@ -33,9 +35,12 @@ export default function Emp() {
   return <AppShell><PageHead back={{ href: "/", label: "กลับรายชื่อ" }} title={isNew ? "เพิ่มพนักงาน" : `${e.first_name_th ?? ""} ${e.last_name_th ?? ""}`} subtitle={isNew ? undefined : e.employee_code} />
     <div className="card"><div className="grid">
       <label>สาขา<select value={e.branch_id ?? ""} onChange={x => setE({ ...e, branch_id: x.target.value })}><option value="">เลือกสาขา</option>{branches.map(b => <option key={b.id} value={b.id}>{b.clients?.name} / {b.name}</option>)}</select></label>
-      <label>สถานะ<select value={e.status} onChange={x => setE({ ...e, status: x.target.value })}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+      <label>สถานะ<select value={e.status} onChange={x => setE({ ...e, status: x.target.value, ...(x.target.value === "resigned" && !e.resigned_at ? { resigned_at: new Date().toISOString().slice(0, 10) } : {}) })}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       {F.map(([k, t]) => <label key={k}>{t}<input type={k.includes("date") ? "date" : "text"} value={e[k] ?? ""} onChange={x => setE({ ...e, [k]: x.target.value })} /></label>)}
     </div></div>
+    {e.status === "resigned" && <div className="card"><h2>การลาออก / พ้นสภาพ</h2><div className="grid">
+      <label>วันที่ลาออก<input type="date" value={e.resigned_at ?? ""} onChange={x => setE({ ...e, resigned_at: x.target.value })} /></label>
+      <label>เหตุผลการลาออก<input value={e.resign_reason ?? ""} onChange={x => setE({ ...e, resign_reason: x.target.value })} /></label></div></div>}
     <div className="card"><h2>ข้อมูลสำคัญ</h2>
       {!isNew && <p>เลขบัตรประชาชน: {pii ? pii.national_id : `•••••••••${e.national_id_last4 ?? ""}`} · บัญชี: {pii ? `${pii.bank_name ?? ""} ${pii.bank_account}` : `••••••${e.bank_last4 ?? ""}`}
         {" "}{pii ? <button className="sec" onClick={() => setPii(null)}>ซ่อน</button> : <button className="sec" onClick={reveal}>ดูข้อมูลเต็ม (ระบบบันทึกการดู)</button>}</p>}
