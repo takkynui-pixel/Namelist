@@ -10,7 +10,8 @@ const ACT: Record<string, string> = { reveal_sensitive: "ดูเลขบั�
   bulk_move: "ย้ายพนักงานหลายคนไปสาขาใหม่", perm_insert: "ให้สิทธิ์เข้าถึงสาขา", perm_update: "แก้ไขสิทธิ์รายสาขา", perm_delete: "ยกเลิกสิทธิ์เข้าถึงสาขา", invite_user: "เชิญผู้ใช้ใหม่",
   admin_set_password: "ตั้งรหัสผ่านให้ผู้ใช้", admin_send_reset: "ส่งลิงก์ตั้งรหัสผ่านให้ผู้ใช้", open_file: "เปิดดูไฟล์แนบ", download_file: "ดาวน์โหลดไฟล์แนบ",
   add_clients: "เพิ่มบริษัทใหม่", edit_clients: "แก้ไขข้อมูลบริษัท", add_service_branches: "เพิ่มสาขา VTA ใหม่", edit_service_branches: "แก้ไขข้อมูลสาขา VTA",
-  add_branches: "ให้สาขา VTA ดูแลบริษัท", remove_branches: "ยกเลิกการดูแลบริษัทของสาขา VTA", edit_branches: "แก้ไขข้อมูลสาขา", change_role: "เปลี่ยนบทบาทผู้ใช้", change_active: "เปิด/ปิดการใช้งานบัญชี" };
+  add_branches: "ให้สาขา VTA ดูแลบริษัท", remove_branches: "ยกเลิกการดูแลบริษัทของสาขา VTA", edit_branches: "แก้ไขข้อมูลสาขา", change_role: "เปลี่ยนบทบาทผู้ใช้", blacklist_check: "ตรวจสอบ Blacklist", blacklist_add: "เพิ่มรายชื่อ Blacklist", blacklist_merge: "เพิ่มรายชื่อ Blacklist (รวมกับรายการเดิม)", blacklist_edit: "แก้ไขรายชื่อ Blacklist",
+  blacklist_remove: "ถอนรายชื่อออกจาก Blacklist", blacklist_restore: "นำรายชื่อกลับเข้า Blacklist", import_blacklist: "นำเข้า Blacklist จาก Excel", reveal_blacklist_id: "ดูเลขบัตรของรายชื่อ Blacklist", blacklist_employee: "ขึ้น Blacklist จากทะเบียนพนักงาน", change_active: "เปิด/ปิดการใช้งานบัญชี" };
 
 export default function Admin() {
   const [ok, setOk] = useState<boolean | null>(null), [tab, setTab] = useState<Tab>("users"), [msg, setMsg] = useState("");
@@ -36,7 +37,7 @@ export default function Admin() {
   useEffect(() => { if (!(ok && tab === "audit")) return; (async () => {
     const { data } = await sb.from("audit_log").select("*").order("at", { ascending: false }).limit(200); const L = data ?? []; setLogs(L);
     const ids = (acts: string[]) => [...new Set(L.filter((l: any) => acts.includes(l.action) && l.record_id).map((l: any) => l.record_id as string))];
-    const m: Record<string, string> = {}, e = ids(["reveal_sensitive", "set_sensitive"]), d = ids(["open_file", "download_file"]);
+    const m: Record<string, string> = {}, e = ids(["reveal_sensitive", "set_sensitive", "blacklist_employee"]), d = ids(["open_file", "download_file"]);
     if (e.length) ((await sb.from("employees").select("id,employee_code,title_th,first_name_th,last_name_th").in("id", e)).data ?? []).forEach((x: any) => { m[x.id] = `${x.employee_code} ${x.title_th ?? ""}${x.first_name_th} ${x.last_name_th ?? ""}`.trim(); });
     if (d.length) ((await sb.from("documents").select("id,title").in("id", d)).data ?? []).forEach((x: any) => { m[x.id] = x.title; });
     setLook(m); })(); }, [tab, ok]);
@@ -67,6 +68,10 @@ export default function Admin() {
       case "add_branches": case "remove_branches": case "edit_branches": return `สาขา ${d.code ?? ""} ${d.name ?? ""} · บริษัท ${d.client_id ? cName(d.client_id) : ""}`;
       case "change_role": return `ผู้ใช้ ${userName(l.record_id)}: ${ROLES[d.from] ?? d.from} → ${ROLES[d.to] ?? d.to}`;
       case "change_active": return `ผู้ใช้ ${userName(l.record_id)}: ${d.to ? "เปิดใช้งาน" : "ปิดใช้งาน"}`;
+      case "blacklist_check": return `พบรายการที่ตรงกัน ${d.hits ?? 0} รายการ`;
+      case "import_blacklist": return `เพิ่ม ${d.inserted ?? 0} รายการ, รวมกับรายการเดิม ${d.merged ?? 0}`;
+      case "blacklist_employee": return `พนักงาน ${look[l.record_id] ?? "-"}`;
+      case "blacklist_add": case "blacklist_merge": case "blacklist_edit": case "blacklist_remove": case "blacklist_restore": case "reveal_blacklist_id": return `รายการอ้างอิง ${(l.record_id ?? "").slice(0, 8)}`;
       default: return ""; } };
 
   // ---------- users ----------

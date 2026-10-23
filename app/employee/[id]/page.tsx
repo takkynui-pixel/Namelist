@@ -22,12 +22,20 @@ export default function Emp() {
     if (body.status !== "resigned") { body.resigned_at = null; body.resign_reason = null; }
     else if (!body.resigned_at) return setMsg("กรอกวันที่ลาออก");
     for (const k in body) if (body[k] === "") body[k] = null;
+    if (isNew || nid) {   // เตือนถ้าตรงกับรายการ Blacklist (ไม่ปิดกั้น ให้ผู้ใช้ตัดสินใจ)
+      const chk = await sb.rpc("check_blacklist", { p_national_id: nid || null, p_first: e.first_name_th ?? null, p_last: e.last_name_th ?? null, p_code: e.employee_code ?? null });
+      if (!chk.error && chk.data?.length && !window.confirm(`⚠ พบข้อมูลตรงกับรายการ Blacklist:\n${chk.data.map((m: any) => `• ${m.full_name} (${m.match_by.join(", ")}) — ${m.reason ?? ""}`).join("\n")}\n\nต้องการบันทึกต่อหรือไม่?`)) return setMsg("ยกเลิกการบันทึก");
+    }
     const r = isNew ? await sb.from("employees").insert(body).select("id").single() : await sb.from("employees").update(body).eq("id", id).select("id").single();
     if (r.error) return setMsg("บันทึกไม่สำเร็จ: " + r.error.message);
     if (nid || bank) { const p = await sb.rpc("set_sensitive", { p_emp: r.data.id, p_nid: nid, p_bank_name: bn, p_bank_acct: bank });
       if (p.error) return setMsg("บันทึกข้อมูลสำคัญไม่สำเร็จ: " + p.error.message); }
     setMsg("บันทึกแล้ว"); if (isNew) router.replace(`/employee/${r.data.id}`);
   };
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => { sb.auth.getUser().then(async ({ data }) => { if (!data.user) return; const { data: p } = await sb.from("profiles").select("role").eq("id", data.user.id).single(); setAdmin(p?.role === "admin"); }); }, []);
+  const toBlacklist = async () => { const reason = window.prompt("เหตุผลที่ขึ้น Blacklist"); if (reason === null) return;
+    const { error } = await sb.rpc("blacklist_employee", { p_emp: id, p_reason: reason }); error ? setMsg("ไม่สำเร็จ: " + error.message) : (setMsg("ขึ้น Blacklist แล้ว"), setE({ ...e, status: "blacklisted" })); };
   const reveal = async () => { const { data, error } = await sb.rpc("reveal_sensitive", { p_emp: id });
     if (error) return setMsg("ไม่สามารถดูได้: " + error.message);
     setPii(data?.[0] ?? {}); setTimeout(() => setPii(null), 30000); };
@@ -38,6 +46,7 @@ export default function Emp() {
       <label>สถานะ<select value={e.status} onChange={x => setE({ ...e, status: x.target.value, ...(x.target.value === "resigned" && !e.resigned_at ? { resigned_at: new Date().toISOString().slice(0, 10) } : {}) })}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       {F.map(([k, t]) => <label key={k}>{t}<input type={k.includes("date") ? "date" : "text"} value={e[k] ?? ""} onChange={x => setE({ ...e, [k]: x.target.value })} /></label>)}
     </div></div>
+    {e.status === "blacklisted" && <div className="card" style={{ borderColor: "#e3a3a3" }}><b className="err">⚠ พนักงานนี้อยู่ในรายการ Blacklist</b></div>}
     {e.status === "resigned" && <div className="card"><h2>การลาออก / พ้นสภาพ</h2><div className="grid">
       <label>วันที่ลาออก<input type="date" value={e.resigned_at ?? ""} onChange={x => setE({ ...e, resigned_at: x.target.value })} /></label>
       <label>เหตุผลการลาออก<input value={e.resign_reason ?? ""} onChange={x => setE({ ...e, resign_reason: x.target.value })} /></label></div></div>}
@@ -47,7 +56,7 @@ export default function Emp() {
       <div className="grid"><label>เลขบัตรประชาชน (กรอกเมื่อต้องการตั้งหรือแก้)<input inputMode="numeric" maxLength={13} value={nid} onChange={x => setNid(x.target.value)} /></label>
       <label>ธนาคาร<input value={bn} onChange={x => setBn(x.target.value)} /></label>
       <label>เลขบัญชี<input inputMode="numeric" value={bank} onChange={x => setBank(x.target.value)} /></label></div></div>
-    <button onClick={save}>บันทึก</button> <span className={msg.includes("ไม่") ? "err" : ""}>{msg}</span>
+    <button onClick={save}>บันทึก</button>{admin && !isNew && e.status !== "blacklisted" && <button className="sec" style={{ marginLeft: 8 }} onClick={toBlacklist}>ขึ้น Blacklist</button>} <span className={msg.includes("ไม่") ? "err" : ""}>{msg}</span>
     {!!hist.length && <div className="card"><h2>ประวัติการจ้าง</h2><table><tbody>{hist.map(h => <tr key={h.id}><td>{h.effective_date}</td><td>{h.event_type}</td><td>{h.reason}</td></tr>)}</tbody></table></div>}
     {!isNew && e.branch_id && <FilesPanel scope="employee" ownerId={id} branchId={e.branch_id} categories={["ประวัติพนักงาน", "สัญญาจ้าง", "เอกสารส่วนตัว", "อื่นๆ"]} pdfOnly />}
   </AppShell>;
