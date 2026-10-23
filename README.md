@@ -3,7 +3,7 @@
 ## ติดตั้ง
 1. สร้างโปรเจกต์ Supabase (เลือก region Singapore) แล้วเปิด SQL Editor
 2. รัน `select vault.create_secret('<สุ่มยาว 32+ ตัวอักษร>','pii_key');` (เก็บ key สำรองไว้ที่ปลอดภัย ถ้าหายจะถอดรหัสไม่ได้)
-3. รัน `001_schema.sql`, `002_admin.sql`, `003_import.sql`, `004_bulk_move.sql`, `005_files.sql` (ตามลำดับ; 005 สร้าง bucket `namelist-files` แบบ private ให้อัตโนมัติ)
+3. รัน `001_schema.sql`, `002_admin.sql`, `003_import.sql`, `004_bulk_move.sql`, `005_files.sql`, `006_audit_labels.sql`, `007_service_branches.sql` (ตามลำดับ; 005 สร้าง bucket `namelist-files` แบบ private ให้อัตโนมัติ)
 4. Authentication > Providers: ปิด "Allow new users to sign up" แล้วสร้างผู้ใช้เองที่ Authentication > Users
 5. ตั้ง Admin คนแรก: `update profiles set role='admin' where id='<uuid>';`
 6. ใส่ `SUPABASE_SERVICE_ROLE_KEY` ใน Vercel (Production เท่านั้น ไม่ใส่ prefix NEXT_PUBLIC) สำหรับการเชิญผู้ใช้ และตั้งค่า SMTP ที่ Supabase > Auth > SMTP เพื่อส่งอีเมลเชิญ
@@ -28,3 +28,9 @@ Admin > เมนู "นำเข้าจาก Excel": เลือกไฟ�
 - พนักงาน: PDF เท่านั้น ประเภท ประวัติพนักงาน/สัญญาจ้าง/เอกสารส่วนตัว/อื่นๆ (ทำเครื่องหมาย "อ่อนไหว" ได้ เห็นเฉพาะผู้มีสิทธิ์ดูเลขเต็ม)
 - บริษัท (เมนู "บริษัท"): สัญญาการบริการ/ระเบียบสวัสดิการ/เอกสารอื่นๆ รองรับ PDF, Word, Excel, PNG, JPG ไม่เกิน 20 MB
 - ดู/ดาวน์โหลด: ผู้มีสิทธิ์สาขาใดสาขาหนึ่งของบริษัท | แนบ/ลบ: ผู้มีสิทธิ์แก้ไขในสาขานั้น (และ Admin) | ทุกการเปิด/ดาวน์โหลดบันทึกใน Audit Log
+
+## โครงสร้างสาขา/บริษัท (007)
+- **สาขา VTA** (service_branches): VTA0001 ลำพูน, VTA0002 บางพลี, VTA0003 พิษณุโลก ... สร้างครั้งเดียว
+- **สาขา x บริษัท** (branches): 1 สาขา VTA ดูแลได้หลายบริษัท เลือกบริษัทจากรายการ (ติ๊กในหน้า จัดการระบบ > สาขาและบริษัท) พนักงานสังกัดแถวนี้
+- **สิทธิ์ผู้ใช้** ผูกกับสาขา VTA (user_service_branches) ครอบคลุมทุกบริษัทที่สาขานั้นดูแล รวมบริษัทที่เพิ่มภายหลัง
+- ตาราง `user_branches` เดิมไม่ถูกใช้แล้ว (เก็บไว้เพื่อย้อนกลับ) ตรวจสิทธิ์ผู้ใช้ทุกคนอีกครั้งหลังรัน 007
