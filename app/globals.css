@@ -81,3 +81,23 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--blue)}
 .tbl{overflow-x:auto} h1,h2{margin-top:0} small{color:var(--muted)}
 button.tab{background:var(--pill);color:var(--navy)} button.tab.on{background:var(--blue-soft);color:var(--blue-text)}
 .bar{height:10px;border-radius:999px;background:var(--pill);overflow:hidden} .bar i{display:block;height:100%;background:var(--blue)}
+
+/* ---------- mobile + profile menu ---------- */
+html,body{overflow-x:hidden}
+main{min-width:0}
+select,input{max-width:100%;min-width:0}
+select{text-overflow:ellipsis}
+button.avatar{padding:0;border:0;cursor:pointer;font:inherit;font-weight:700;font-size:20px;line-height:1}
+button.avatar:focus-visible{outline:3px solid var(--blue-border);outline-offset:2px}
+.menu-wrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 10px);width:min(280px,calc(100vw - 28px));background:#fff;border-radius:22px;padding:8px;box-shadow:0 12px 36px rgba(30,42,82,.18);z-index:60}
+.menu .who{padding:10px 14px 12px;border-bottom:1px solid #eef1f8;margin-bottom:6px}
+.menu .who b{display:block;word-break:break-all;font-size:14px;font-weight:600} .menu .who span{color:var(--muted);font-size:13px}
+.menu a,.menu button{display:block;width:100%;text-align:left;background:none;color:var(--navy);border:0;border-radius:14px;padding:12px 14px;font:inherit;font-size:15px;font-weight:500;cursor:pointer;text-decoration:none}
+.menu a:hover,.menu button:hover{background:var(--pill);filter:none;text-decoration:none}
+.menu .out{color:#b3261e}
+@media (max-width:760px){
+  .row select{flex:1 1 150px;max-width:100%}
+  .row input{flex:1 1 100%;min-width:0}
+  .row .btn,.row>button{flex:none}
+}
