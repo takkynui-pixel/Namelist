@@ -6,7 +6,7 @@ export default function Login() {
   async function submit() {
     setBusy(true); setMsg("");
     const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) { setMsg("อีเมลหรือรหัสผ่านไม่ถูกต้อง"); setBad(true); setBusy(false); } else window.location.href = "/";
+    if (error) { setMsg("อีเมลหรือรหัสผ่านไม่ถูกต้อง"); setBad(true); setBusy(false); } else window.location.href = "/dashboard";
   }
   async function reset() {
     if (!email) { setBad(true); return setMsg("กรอกอีเมลก่อน"); }

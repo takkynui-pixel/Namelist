@@ -3,7 +3,7 @@
 ## ติดตั้ง
 1. สร้างโปรเจกต์ Supabase (เลือก region Singapore) แล้วเปิด SQL Editor
 2. รัน `select vault.create_secret('<สุ่มยาว 32+ ตัวอักษร>','pii_key');` (เก็บ key สำรองไว้ที่ปลอดภัย ถ้าหายจะถอดรหัสไม่ได้)
-3. รัน `001_schema.sql`, `002_admin.sql`, `003_import.sql`, `004_bulk_move.sql`, `005_files.sql`, `006_audit_labels.sql`, `007_service_branches.sql`, `008_resignation.sql`, `009_blacklist.sql` (ตามลำดับ; 005 สร้าง bucket `namelist-files` แบบ private ให้อัตโนมัติ)
+3. รัน `001_schema.sql`, `002_admin.sql`, `003_import.sql`, `004_bulk_move.sql`, `005_files.sql`, `006_audit_labels.sql`, `007_service_branches.sql`, `008_resignation.sql`, `009_blacklist.sql`, `010_dashboard.sql` (ตามลำดับ; 005 สร้าง bucket `namelist-files` แบบ private ให้อัตโนมัติ)
 4. Authentication > Providers: ปิด "Allow new users to sign up" แล้วสร้างผู้ใช้เองที่ Authentication > Users
 5. ตั้ง Admin คนแรก: `update profiles set role='admin' where id='<uuid>';`
 6. ใส่ `SUPABASE_SERVICE_ROLE_KEY` ใน Vercel (Production เท่านั้น ไม่ใส่ prefix NEXT_PUBLIC) สำหรับการเชิญผู้ใช้ และตั้งค่า SMTP ที่ Supabase > Auth > SMTP เพื่อส่งอีเมลเชิญ
@@ -47,3 +47,8 @@ Admin > เมนู "นำเข้าจาก Excel": เลือกไฟ�
 - จับคู่ด้วย: เลขบัตรตรงกัน / รหัสพนักงานตรงกัน / ชื่อ-สกุลตรงกัน (ไม่สนคำนำหน้า) | จับคู่ด้วยชื่ออย่างเดียวจะแสดงคำเตือนว่าอาจเป็นคนละคน
 - เพิ่มพนักงานใหม่หรือกรอกเลขบัตร: ระบบเตือนถ้าตรง Blacklist (ไม่ปิดกั้น) | Admin กด "ขึ้น Blacklist" จากหน้าพนักงานได้
 - ทุกการตรวจสอบ/ดูเลขเต็ม/แก้ไข บันทึกใน Audit Log (การตรวจสอบบันทึกเฉพาะจำนวนที่พบ ไม่บันทึกข้อมูลที่กรอก)
+
+## ภาพรวม / Dashboard (010)
+- เมนู "ภาพรวม" (หน้าแรกหลังเข้าสู่ระบบ): พนักงานทำงานอยู่/ลาพักงาน/รอเริ่มงาน, เข้า-ออก 30 วัน, อัตราลาออก 12 เดือน, อายุงานเฉลี่ย, กำลังคนและเข้า-ออกรายเดือน, แยกตามสาขา VTA / พื้นที่ / บริษัท, เหตุผลลาออก, อายุงาน, ช่วงอายุ, ความครบถ้วนของข้อมูล, ข้อสังเกตและข้อเสนอแนะอัตโนมัติ, ดาวน์โหลด CSV
+- คำนวณในฐานข้อมูล (`dashboard_overview`) ส่งกลับเฉพาะตัวเลขรวมตามสาขาที่ผู้ใช้มีสิทธิ์ ไม่มีข้อมูลรายบุคคล กรองตามสาขา VTA / บริษัทได้
+- เหตุผลลาออกจัดกลุ่มด้วยคำสำคัญ (ปรับได้ที่ `private.resign_category` ใน 010) เป็นค่าประมาณ | อัตราลาออกขึ้นกับความครบถ้วนของวันที่เริ่มงาน/ลาออก

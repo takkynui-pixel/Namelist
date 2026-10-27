@@ -21,7 +21,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const key = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(false); btn.current?.focus(); } };
     document.addEventListener("mousedown", down); document.addEventListener("touchstart", down); document.addEventListener("keydown", key);
     return () => { document.removeEventListener("mousedown", down); document.removeEventListener("touchstart", down); document.removeEventListener("keydown", key); }; }, [open]);
-  const items = [{ href: "/", label: "พนักงาน" }, { href: "/companies", label: "บริษัท" }, ...(["admin", "multi_branch_manager", "branch_officer"].includes(role) ? [{ href: "/blacklist", label: "Blacklist" }] : []), ...(role === "admin" ? [{ href: "/import", label: "นำเข้าจาก Excel" }, { href: "/admin", label: "จัดการระบบ" }] : [])];
+  const items = [{ href: "/dashboard", label: "ภาพรวม" }, { href: "/", label: "พนักงาน" }, { href: "/companies", label: "บริษัท" }, ...(["admin", "multi_branch_manager", "branch_officer"].includes(role) ? [{ href: "/blacklist", label: "Blacklist" }] : []), ...(role === "admin" ? [{ href: "/import", label: "นำเข้าจาก Excel" }, { href: "/admin", label: "จัดการระบบ" }] : [])];
   const on = (h: string) => (h === "/" ? path === "/" || path.startsWith("/employee") : h === "/companies" ? path.startsWith("/companies") : h === "/blacklist" ? path.startsWith("/blacklist") : path === h);
   return <div className="outer"><div className="shell">
     <header className="topbar">

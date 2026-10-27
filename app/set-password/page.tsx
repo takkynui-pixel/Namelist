@@ -6,7 +6,7 @@ export default function SetPassword() {
   async function save() {
     if (pw.length < 10) return setMsg("รหัสผ่านต้องยาวอย่างน้อย 10 ตัวอักษร");
     const { error } = await sb.auth.updateUser({ password: pw });
-    error ? setMsg("ตั้งรหัสผ่านไม่สำเร็จ: " + error.message + " (ลิงก์อาจหมดอายุ ให้ขอลิงก์ใหม่)") : (window.location.href = "/");
+    error ? setMsg("ตั้งรหัสผ่านไม่สำเร็จ: " + error.message + " (ลิงก์อาจหมดอายุ ให้ขอลิงก์ใหม่)") : (window.location.href = "/dashboard");
   }
   return <div className="auth"><div className="auth-box"><div className="auth-logo"><img src="/logo.png" alt="VTA Service" /></div>
     <div className="card"><h1>ตั้งรหัสผ่าน</h1><label>รหัสผ่านใหม่ (อย่างน้อย 10 ตัวอักษร)</label>
