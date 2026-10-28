@@ -27,7 +27,7 @@ export default function Blacklist() {
   useEffect(() => { if (role !== "admin" || tab !== "list") return;
     let x: any = sb.from("blacklist").select("id,title_th,first_name_th,last_name_th,employee_code,national_id_last4,reason,listed_on,note,status,removed_reason,source", { count: "exact" }).order("first_name_th").range(pg * PER, pg * PER + PER - 1);
     if (st) x = x.eq("status", st);
-    const s = q.replace(/[%,()]/g, "").trim(); if (s) x = x.or(`first_name_th.ilike.%${s}%,last_name_th.ilike.%${s}%,employee_code.ilike.%${s}%,national_id_last4.eq.${s}`);
+    q.replace(/[%,()]/g, " ").split(/\s+/).filter(Boolean).forEach(t => { x = x.or(`first_name_th.ilike.%${t}%,last_name_th.ilike.%${t}%,employee_code.ilike.%${t}%${/^\d{4}$/.test(t) ? `,national_id_last4.eq.${t}` : ""}`); });
     x.then(({ data, count }: any) => { setRows(data ?? []); setTotal(count ?? 0); }); }, [role, tab, q, st, pg, tick]);
 
   if (role === null) return null;
@@ -37,7 +37,7 @@ export default function Blacklist() {
   const check = async () => {
     const nid = ck.nid.replace(/\D/g, ""); setHits(null);
     if (ck.nid && nid.length !== 13) return say("เลขบัตรประชาชนต้องมี 13 หลัก", true);
-    if (!nid && !ck.first.trim() && !ck.code.trim()) return say("กรอกอย่างน้อย 1 ช่อง (เลขบัตร ชื่อ หรือรหัสพนักงาน)", true);
+    if (!nid && !ck.first.trim() && !ck.last.trim() && !ck.code.trim()) return say("กรอกอย่างน้อย 1 ช่อง (เลขบัตร ชื่อ นามสกุล หรือรหัสพนักงาน)", true);
     setBusy(true); say("");
     const { data, error } = await sb.rpc("check_blacklist", { p_national_id: nid || null, p_first: ck.first.trim() || null, p_last: ck.last.trim() || null, p_code: ck.code.trim() || null });
     setBusy(false); if (error) return say("ตรวจสอบไม่สำเร็จ: " + error.message, true); setHits(data ?? []); };
@@ -71,19 +71,19 @@ export default function Blacklist() {
     {msg && <p className={bad ? "err" : "ok"} role="status">{msg}</p>}
 
     {tab === "check" && <><div className="card"><h2>ตรวจสอบบุคคล</h2>
-      <p className="mut" style={{ marginTop: 0 }}>กรอกเท่าที่มี ระบบเทียบกับเลขบัตรประชาชน รหัสพนักงาน และชื่อ-สกุล (ไม่สนคำนำหน้า) และแสดงเฉพาะรายการที่ตรงกัน</p>
+      <p className="mut" style={{ marginTop: 0 }}>กรอกเท่าที่มี ค้นด้วยชื่อ หรือนามสกุลอย่างเดียว หรือบางส่วนของชื่อก็ได้ (ไม่สนคำนำหน้า) ระบบเทียบกับเลขบัตรประชาชน รหัสพนักงาน และชื่อ-สกุล และแสดงเฉพาะรายการที่ตรงกัน</p>
       <div className="grid">
-        <label>เลขบัตรประชาชน (13 หลัก)<input inputMode="numeric" maxLength={13} value={ck.nid} onChange={e => setCk({ ...ck, nid: e.target.value })} /></label>
-        <label>ชื่อ<input value={ck.first} onChange={e => setCk({ ...ck, first: e.target.value })} /></label>
-        <label>นามสกุล<input value={ck.last} onChange={e => setCk({ ...ck, last: e.target.value })} /></label>
-        <label>รหัสพนักงาน<input value={ck.code} onChange={e => setCk({ ...ck, code: e.target.value })} /></label></div>
+        <label>เลขบัตรประชาชน (13 หลัก)<input inputMode="numeric" maxLength={13} value={ck.nid} onKeyDown={e => e.key === "Enter" && check()} onChange={e => setCk({ ...ck, nid: e.target.value })} /></label>
+        <label>ชื่อ<input value={ck.first} onKeyDown={e => e.key === "Enter" && check()} onChange={e => setCk({ ...ck, first: e.target.value })} /></label>
+        <label>นามสกุล<input value={ck.last} onKeyDown={e => e.key === "Enter" && check()} onChange={e => setCk({ ...ck, last: e.target.value })} /></label>
+        <label>รหัสพนักงาน<input value={ck.code} onKeyDown={e => e.key === "Enter" && check()} onChange={e => setCk({ ...ck, code: e.target.value })} /></label></div>
       <p><button disabled={busy} onClick={check}>ตรวจสอบ</button></p></div>
-      {hits && (hits.length ? <div className="card" style={{ borderColor: "#e3a3a3" }}><h2 className="err">⚠ พบ {hits.length} รายการที่ตรงกัน</h2>
+      {hits && (hits.length ? <div className="card" style={{ borderColor: "#e3a3a3" }}><h2 className="err">⚠ พบ {hits[0]?.total ?? hits.length} รายการที่ตรงกัน{(hits[0]?.total ?? 0) > hits.length ? ` (แสดง ${hits.length} รายการแรก ลองระบุชื่อ/นามสกุลให้ครบเพื่อจำกัดผล)` : ""}</h2>
         {hits.map(h => <div key={h.bl_id} style={{ padding: "10px 0", borderTop: "1px solid #e2e8e5" }}>
           <b>{h.full_name}</b> {h.match_by.map((m: string) => <span key={m} className="badge draft" style={{ marginLeft: 6 }}>{m}</span>)}
           <div className="mut">รหัสพนักงาน: {h.emp_code ?? "-"} · เลขบัตร: {h.id_last4 ? `•••••••••${h.id_last4}` : "ไม่มีในรายการ"}{h.listed_on ? ` · ขึ้นรายการเมื่อ ${new Date(h.listed_on).toLocaleDateString("th-TH")}` : ""}</div>
           <div>เหตุผล: {h.reason ?? "-"}</div>
-          {h.match_by.length === 1 && h.match_by[0] === "ชื่อ-สกุลตรงกัน" && <small className="mut">จับคู่ด้วยชื่ออย่างเดียว อาจเป็นคนละคน ควรตรวจสอบเลขบัตรหรือเอกสารเพิ่มเติม</small>}</div>)}</div>
+          {!h.match_by.some((m: string) => m.startsWith("เลขบัตร") || m.startsWith("รหัสพนักงาน")) && <small className="mut">จับคู่ด้วยชื่ออย่างเดียว อาจเป็นคนละคน ควรตรวจสอบเลขบัตรหรือเอกสารเพิ่มเติม</small>}</div>)}</div>
         : <div className="card"><h2 className="ok">ไม่พบรายการที่ตรงกัน</h2><p className="mut" style={{ margin: 0 }}>ผลนี้ไม่ได้ยืนยันว่าไม่เคยมีประวัติ เพราะบางรายการในรายชื่อไม่มีเลขบัตรหรือรหัสพนักงาน ถ้ากรอกเลขบัตรไม่ครบทุกช่อง ระบบเทียบได้เฉพาะช่องที่กรอก</p></div>)}</>}
 
     {tab === "list" && admin && <>
@@ -98,7 +98,7 @@ export default function Blacklist() {
         <label>หมายเหตุ<input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} /></label></div>
         <div className="row" style={{ marginTop: 12 }}><button onClick={save}>บันทึก</button><button className="sec" onClick={() => setForm(null)}>ยกเลิก</button></div></div>}
       <div className="card"><div className="row" style={{ marginBottom: 0 }}>
-        <input placeholder="ค้นหาชื่อ รหัสพนักงาน หรือเลขท้ายบัตร 4 หลัก" value={q} onChange={e => setQ(e.target.value)} />
+        <input placeholder="ค้นหาชื่อ นามสกุล รหัสพนักงาน หรือเลขท้ายบัตร 4 หลัก (พิมพ์ได้หลายคำ)" value={q} onChange={e => setQ(e.target.value)} />
         <select value={st} onChange={e => setSt(e.target.value)} aria-label="สถานะ"><option value="active">ใช้งาน</option><option value="removed">ถอนออกแล้ว</option><option value="">ทั้งหมด</option></select>
         <button onClick={() => setForm({ ...EMPTY })}>เพิ่มรายชื่อ</button></div></div>
       <div className="card flush"><table><thead><tr><th>ชื่อ-สกุล</th><th>รหัสพนักงาน</th><th>เลขบัตร</th><th>เหตุผล</th><th>สถานะ</th><th></th></tr></thead><tbody>
