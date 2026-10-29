@@ -7,7 +7,7 @@ import PageHead from "@/components/PageHead";
 const ROLES: Record<string, string> = { admin: "Admin", multi_branch_manager: "ผู้จัดการหลายสาขา", branch_officer: "เจ้าหน้าที่สาขา", viewer: "ดูอย่างเดียว" };
 type Tab = "users" | "orgs" | "audit";
 const ACT: Record<string, string> = { reveal_sensitive: "ดูเลขบัตรประชาชน/บัญชีธนาคารแบบเต็ม", set_sensitive: "บันทึกเลขบัตรประชาชน/บัญชีธนาคาร", import_employees: "นำเข้าพนักงานจาก Excel",
-  bulk_move: "ย้ายพนักงานหลายคนไปสาขาใหม่", perm_insert: "ให้สิทธิ์เข้าถึงสาขา", perm_update: "แก้ไขสิทธิ์รายสาขา", perm_delete: "ยกเลิกสิทธิ์เข้าถึงสาขา", invite_user: "เชิญผู้ใช้ใหม่",
+  bulk_move: "ย้ายพนักงานหลายคนไปสาขาใหม่", perm_insert: "ให้สิทธิ์เข้าถึงสาขา", perm_update: "แก้ไขสิทธิ์รายสาขา", perm_delete: "ยกเลิกสิทธิ์เข้าถึงสาขา", client_perm_insert: "ให้สิทธิ์เข้าถึงบริษัท", client_perm_update: "แก้ไขสิทธิ์รายบริษัท", client_perm_delete: "ยกเลิกสิทธิ์เข้าถึงบริษัท", invite_user: "เชิญผู้ใช้ใหม่",
   admin_set_password: "ตั้งรหัสผ่านให้ผู้ใช้", admin_send_reset: "ส่งลิงก์ตั้งรหัสผ่านให้ผู้ใช้", open_file: "เปิดดูไฟล์แนบ", download_file: "ดาวน์โหลดไฟล์แนบ",
   add_clients: "เพิ่มบริษัทใหม่", edit_clients: "แก้ไขข้อมูลบริษัท", add_service_branches: "เพิ่มสาขา VTA ใหม่", edit_service_branches: "แก้ไขข้อมูลสาขา VTA",
   add_branches: "ให้สาขา VTA ดูแลบริษัท", remove_branches: "ยกเลิกการดูแลบริษัทของสาขา VTA", edit_branches: "แก้ไขข้อมูลสาขา", change_role: "เปลี่ยนบทบาทผู้ใช้", blacklist_check: "ตรวจสอบ Blacklist", blacklist_add: "เพิ่มรายชื่อ Blacklist", blacklist_merge: "เพิ่มรายชื่อ Blacklist (รวมกับรายการเดิม)", blacklist_edit: "แก้ไขรายชื่อ Blacklist",
@@ -16,7 +16,7 @@ const ACT: Record<string, string> = { reveal_sensitive: "ดูเลขบั�
 export default function Admin() {
   const [ok, setOk] = useState<boolean | null>(null), [tab, setTab] = useState<Tab>("users"), [msg, setMsg] = useState("");
   const [users, setUsers] = useState<any[]>([]), [clients, setClients] = useState<any[]>([]), [svcs, setSvcs] = useState<any[]>([]), [units, setUnits] = useState<any[]>([]);
-  const [perms, setPerms] = useState<any[]>([]), [sel, setSel] = useState<any>(null), [logs, setLogs] = useState<any[]>([]), [look, setLook] = useState<Record<string, string>>({});
+  const [perms, setPerms] = useState<any[]>([]), [cperms, setCperms] = useState<any[]>([]), [cq, setCq] = useState(""), [sel, setSel] = useState<any>(null), [logs, setLogs] = useState<any[]>([]), [look, setLook] = useState<Record<string, string>>({});
   const [inv, setInv] = useState({ email: "", full_name: "", role: "viewer" }), [pwFor, setPwFor] = useState<any>(null), [pw, setPw] = useState("");
   const [nc, setNc] = useState({ code: "", name: "", tax_id: "" }), [ncSvc, setNcSvc] = useState<Set<string>>(new Set());
   const [ns, setNs] = useState({ code: "", name: "", area: "" }), [editC, setEditC] = useState<any>(null), [editS, setEditS] = useState<any>(null), [panelS, setPanelS] = useState<any>(null), [q, setQ] = useState("");
@@ -27,7 +27,9 @@ export default function Admin() {
     setClients((await sb.from("clients").select("*").order("name")).data ?? []);
     setSvcs((await sb.from("service_branches").select("*").order("code")).data ?? []);
     setUnits((await sb.from("branches").select("id,client_id,service_branch_id,code,name,area").order("code")).data ?? []); };
-  const loadPerms = async (uid: string) => setPerms((await sb.from("user_service_branches").select("*").eq("user_id", uid)).data ?? []);
+  const loadPerms = async (uid: string) => {
+    const [a, b] = await Promise.all([sb.from("user_service_branches").select("*").eq("user_id", uid), sb.from("user_clients").select("*").eq("user_id", uid)]);
+    setPerms(a.data ?? []); setCperms(b.data ?? []); };
 
   useEffect(() => { if (new URLSearchParams(window.location.search).get("tab") === "orgs") setTab("orgs"); }, []);
   useEffect(() => { sb.auth.getUser().then(async ({ data }) => {
@@ -60,6 +62,8 @@ export default function Admin() {
       case "bulk_move": return `ย้าย ${d.count ?? 0} คน ไปที่ ${brName(l.record_id)}`;
       case "perm_insert": case "perm_update": return `ผู้ใช้ ${userName(l.record_id)} · สาขา ${d.service_branch_id ? sLabel(d.service_branch_id) : brName(d.branch_id)} · ${d.can_edit ? "แก้ไขได้" : "ดูอย่างเดียว"}${d.can_view_sensitive ? " · ดูเลขบัตร/บัญชีเต็มได้" : ""}`;
       case "perm_delete": return `ผู้ใช้ ${userName(l.record_id)} · สาขา ${d.service_branch_id ? sLabel(d.service_branch_id) : brName(d.branch_id)}`;
+      case "client_perm_insert": case "client_perm_update": return `ผู้ใช้ ${userName(l.record_id)} · บริษัท ${cName(d.client_id)} · ${d.can_edit ? "แก้ไขได้" : "ดูอย่างเดียว"}${d.can_view_sensitive ? " · ดูเลขบัตร/บัญชีเต็มได้" : ""}`;
+      case "client_perm_delete": return `ผู้ใช้ ${userName(l.record_id)} · บริษัท ${cName(d.client_id)}`;
       case "invite_user": return `${d.email ?? ""} · บทบาท ${ROLES[d.role] ?? d.role ?? ""}`;
       case "admin_set_password": case "admin_send_reset": return `ผู้ใช้ ${userName(l.record_id)}`;
       case "open_file": case "download_file": return `ไฟล์: ${d.title ?? look[l.record_id] ?? "-"}`;
@@ -92,6 +96,15 @@ export default function Admin() {
     const { error } = await sb.from("user_service_branches").upsert(next); error ? flash("ไม่สำเร็จ: " + error.message) : loadPerms(sel.id); };
   const toggleAccess = async (sid: string, on: boolean) => { if (on) return setPerm(sid, "can_edit", false);
     const { error } = await sb.from("user_service_branches").delete().eq("user_id", sel.id).eq("service_branch_id", sid); error ? flash("ไม่สำเร็จ: " + error.message) : loadPerms(sel.id); };
+
+  // สิทธิ์รายบริษัท: ให้เห็น/แก้ไขเฉพาะบริษัทที่เลือก (ทุกสาขา VTA ที่ดูแลบริษัทนั้น) โดยไม่ต้องให้ทั้งสาขา
+  const setCPerm = async (cid: string, k: string, v: boolean) => {
+    const cur = cperms.find(p => p.client_id === cid);
+    const next = { user_id: sel.id, client_id: cid, can_edit: false, can_view_sensitive: false, ...cur, [k]: v };
+    const { error } = await sb.from("user_clients").upsert(next); error ? flash("ไม่สำเร็จ: " + error.message) : loadPerms(sel.id); };
+  const toggleCAccess = async (cid: string, on: boolean) => { if (on) return setCPerm(cid, "can_edit", false);
+    const { error } = await sb.from("user_clients").delete().eq("user_id", sel.id).eq("client_id", cid); error ? flash("ไม่สำเร็จ: " + error.message) : loadPerms(sel.id); };
+  const viaSvc = (cid: string) => [...new Set(units.filter(u => u.client_id === cid && perms.some(p => p.service_branch_id === u.service_branch_id)).map(u => svcs.find(x => x.id === u.service_branch_id)?.code).filter(Boolean))].join(", ");
 
   // ---------- companies / VTA branches ----------
   const toggleUnit = async (sid: string, cid: string, on: boolean) => {
@@ -130,13 +143,13 @@ export default function Admin() {
         {users.map(u => <tr key={u.id}><td>{u.full_name}<br /><small>{u.email}</small></td>
           <td><select value={u.role} onChange={e => upd(u.id, { role: e.target.value })}>{Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
           <td><input type="checkbox" checked={u.active} aria-label="เปิดใช้งานบัญชี" onChange={e => upd(u.id, { active: e.target.checked })} /></td>
-          <td><div className="row" style={{ marginBottom: 0 }}><button className="sec" onClick={() => { setSel(u); loadPerms(u.id); }}>กำหนดสาขา</button><button className="sec" onClick={() => sendReset(u)}>ส่งลิงก์ตั้งรหัสผ่าน</button><button className="sec" onClick={() => { setPwFor(u); setPw(""); }}>ตั้งรหัสผ่าน</button></div></td></tr>)}</tbody></table></div>
+          <td><div className="row" style={{ marginBottom: 0 }}><button className="sec" onClick={() => { setSel(u); setCq(""); loadPerms(u.id); }}>กำหนดสิทธิ์</button><button className="sec" onClick={() => sendReset(u)}>ส่งลิงก์ตั้งรหัสผ่าน</button><button className="sec" onClick={() => { setPwFor(u); setPw(""); }}>ตั้งรหัสผ่าน</button></div></td></tr>)}</tbody></table></div>
       {pwFor && <div className="card"><h2>ตั้งรหัสผ่านให้ {pwFor.full_name ?? pwFor.email}</h2>
         <div className="row"><input value={pw} onChange={e => setPw(e.target.value)} placeholder="อย่างน้อย 10 ตัวอักษร" autoComplete="off" /><button className="sec" onClick={gen}>สุ่มรหัส</button><button onClick={savePw}>บันทึกรหัสผ่าน</button><button className="sec" onClick={() => setPwFor(null)}>ยกเลิก</button></div>
         <p className="mut" style={{ margin: 0 }}>ส่งรหัสให้ผู้ใช้ทางช่องทางส่วนตัว และให้เปลี่ยนรหัสเองหลังเข้าสู่ระบบ (เมนู "เปลี่ยนรหัสผ่าน")</p></div>}
-      {sel && <div className="card"><h2>สิทธิ์รายสาขา: {sel.full_name ?? sel.email}</h2>
+      {sel && <div className="card"><h2>สิทธิ์รายสาขา VTA: {sel.full_name ?? sel.email}</h2>
         {sel.role === "admin" ? <p>Admin เห็นและแก้ไขได้ทุกสาขาอยู่แล้ว</p> : sel.role === "viewer" && <p><small>บทบาท "ดูอย่างเดียว" จะแก้ไขไม่ได้ แม้ติ๊กสิทธิ์แก้ไข</small></p>}
-        <p className="mut">สิทธิ์ผูกกับสาขา VTA ครอบคลุมทุกบริษัทที่สาขานั้นดูแล รวมบริษัทที่เพิ่มในภายหลัง</p>
+        <p className="mut">สิทธิ์ผูกกับสาขา VTA ครอบคลุมทุกบริษัทที่สาขานั้นดูแล รวมบริษัทที่เพิ่มในภายหลัง ถ้าต้องการให้เห็นเฉพาะบางบริษัท ให้ไม่ติ๊กสาขา แล้วกำหนดในส่วน "สิทธิ์รายบริษัท" ด้านล่าง</p>
         <div className="tbl"><table><thead><tr><th>สาขา VTA</th><th>บริษัทที่ดูแล</th><th>เข้าถึง</th><th>แก้ไข</th><th>ดูเลขบัตร/บัญชีเต็ม</th></tr></thead><tbody>
           {svcs.map(s => { const p = perms.find(x => x.service_branch_id === s.id), cs = clientsOf(s.id);
             return <tr key={s.id}><td>{s.code} {s.name}</td><td><small>{cs.length ? `${cs.length} บริษัท: ${cs.slice(0, 3).map(u => cName(u.client_id)).join(", ")}${cs.length > 3 ? " ..." : ""}` : "ยังไม่มี"}</small></td>
@@ -144,6 +157,20 @@ export default function Admin() {
               <td><input type="checkbox" aria-label="แก้ไข" disabled={!p} checked={!!p?.can_edit} onChange={e => setPerm(s.id, "can_edit", e.target.checked)} /></td>
               <td><input type="checkbox" aria-label="ดูข้อมูลเต็ม" disabled={!p} checked={!!p?.can_view_sensitive} onChange={e => setPerm(s.id, "can_view_sensitive", e.target.checked)} /></td></tr>; })}
           {!svcs.length && <tr><td colSpan={5}>ยังไม่มีสาขา VTA ไปสร้างที่แท็บ "สาขาและบริษัท"</td></tr>}</tbody></table></div></div>}
+      {sel && sel.role !== "admin" && (() => { const k = cq.trim().toLowerCase(), got = (id: string) => cperms.some(p => p.client_id === id);
+        const list = clients.filter(c => got(c.id) || (k && `${c.code} ${c.name}`.toLowerCase().includes(k))).sort((a, b) => Number(got(b.id)) - Number(got(a.id)) || a.name.localeCompare(b.name, "th")), shown = list.slice(0, 40);
+        return <div className="card"><h2>สิทธิ์รายบริษัท: {sel.full_name ?? sel.email}</h2>
+          <p className="mut">ให้เห็นเฉพาะบริษัทที่เลือก โดยไม่ต้องให้ทั้งสาขา VTA ครอบคลุมพนักงานของบริษัทนั้นในทุกสาขา VTA ที่ดูแลบริษัทนี้ สิทธิ์จะรวมกับสิทธิ์รายสาขา (ได้จากทางใดทางหนึ่งก็ผ่าน)</p>
+          <div className="row"><input type="search" placeholder="ค้นหาชื่อหรือรหัสบริษัท เพื่อเพิ่มสิทธิ์" aria-label="ค้นหาบริษัท" value={cq} onChange={e => setCq(e.target.value)} /></div>
+          <div className="tbl"><table><thead><tr><th>บริษัท</th><th>สาขา VTA ที่ดูแล</th><th>เข้าถึง</th><th>แก้ไข</th><th>ดูเลขบัตร/บัญชีเต็ม</th></tr></thead><tbody>
+            {shown.map(c => { const p = cperms.find(x => x.client_id === c.id), us = svcsOf(c.id), vs = viaSvc(c.id);
+              return <tr key={c.id}><td>{c.name}{c.active === false && <small> (ปิดใช้งาน)</small>}<br /><small>{c.code}</small></td>
+                <td><small>{us.length ? us.map(u => svcs.find(x => x.id === u.service_branch_id)?.code).filter(Boolean).join(", ") : "ยังไม่มี"}{vs && <><br />ได้สิทธิ์ผ่านสาขา VTA แล้ว: {vs}</>}</small></td>
+                <td><input type="checkbox" aria-label="เข้าถึงบริษัท" checked={!!p} onChange={e => toggleCAccess(c.id, e.target.checked)} /></td>
+                <td><input type="checkbox" aria-label="แก้ไข" disabled={!p} checked={!!p?.can_edit} onChange={e => setCPerm(c.id, "can_edit", e.target.checked)} /></td>
+                <td><input type="checkbox" aria-label="ดูข้อมูลเต็ม" disabled={!p} checked={!!p?.can_view_sensitive} onChange={e => setCPerm(c.id, "can_view_sensitive", e.target.checked)} /></td></tr>; })}
+            {!shown.length && <tr><td colSpan={5}>{k ? "ไม่พบบริษัทที่ตรงกับคำค้น" : "ยังไม่ได้กำหนดสิทธิ์รายบริษัท พิมพ์ชื่อหรือรหัสบริษัทในช่องค้นหาเพื่อเพิ่ม"}</td></tr>}
+            {list.length > shown.length && <tr><td colSpan={5}><small>แสดง {shown.length} จาก {list.length} รายการ พิมพ์คำค้นให้เฉพาะเจาะจงขึ้น</small></td></tr>}</tbody></table></div></div>; })()}
     </>}
 
     {tab === "orgs" && <>

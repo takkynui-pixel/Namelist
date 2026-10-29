@@ -3,7 +3,7 @@
 ## ติดตั้ง
 1. สร้างโปรเจกต์ Supabase (เลือก region Singapore) แล้วเปิด SQL Editor
 2. รัน `select vault.create_secret('<สุ่มยาว 32+ ตัวอักษร>','pii_key');` (เก็บ key สำรองไว้ที่ปลอดภัย ถ้าหายจะถอดรหัสไม่ได้)
-3. รัน `001_schema.sql`, `002_admin.sql`, `003_import.sql`, `004_bulk_move.sql`, `005_files.sql`, `006_audit_labels.sql`, `007_service_branches.sql`, `008_resignation.sql`, `009_blacklist.sql`, `010_dashboard.sql`, `011_search.sql` (ตามลำดับ; 005 สร้าง bucket `namelist-files` แบบ private ให้อัตโนมัติ)
+3. รัน `001_schema.sql`, `002_admin.sql`, `003_import.sql`, `004_bulk_move.sql`, `005_files.sql`, `006_audit_labels.sql`, `007_service_branches.sql`, `008_resignation.sql`, `009_blacklist.sql`, `010_dashboard.sql`, `011_search.sql`, `012_client_access.sql` (ตามลำดับ; 005 สร้าง bucket `namelist-files` แบบ private ให้อัตโนมัติ)
 4. Authentication > Providers: ปิด "Allow new users to sign up" แล้วสร้างผู้ใช้เองที่ Authentication > Users
 5. ตั้ง Admin คนแรก: `update profiles set role='admin' where id='<uuid>';`
 6. ใส่ `SUPABASE_SERVICE_ROLE_KEY` ใน Vercel (Production เท่านั้น ไม่ใส่ prefix NEXT_PUBLIC) สำหรับการเชิญผู้ใช้ และตั้งค่า SMTP ที่ Supabase > Auth > SMTP เพื่อส่งอีเมลเชิญ
@@ -56,3 +56,9 @@ Admin > เมนู "นำเข้าจาก Excel": เลือกไฟ�
 ## การค้นหา (011)
 - พนักงาน: ค้นผ่านฟังก์ชัน `search_employees` พิมพ์หลายคำได้ (ชื่อ นามสกุล รหัส ชื่อเล่น ชื่ออังกฤษ) ไม่สนตัวพิมพ์/ช่องว่างแฝง ค้นหาทุกสถานะอัตโนมัติเมื่อมีคำค้น (เลือกสถานะเองเพื่อจำกัดได้) หน่วงการยิงคำค้น 250ms และไม่ให้คำตอบเก่าทับผลล่าสุด
 - Blacklist: ค้นด้วยชื่อหรือนามสกุลอย่างเดียว/บางส่วนได้ (ชื่อบางส่วนตั้งแต่ 3 ตัวอักษร) ผลเรียงตรงมากไปน้อย แสดงสูงสุด 50 รายการ
+
+## สิทธิ์ผู้ใช้ (007 + 012)
+- สิทธิ์รายสาขา VTA (`user_service_branches`): เห็น/แก้ไขทุกบริษัทที่สาขานั้นดูแล รวมบริษัทที่เพิ่มภายหลัง
+- สิทธิ์รายบริษัท (`user_clients`): เห็น/แก้ไขเฉพาะบริษัทที่เลือก ครอบคลุมทุกสาขา VTA ที่ดูแลบริษัทนั้น
+- สิทธิ์จริงคือรวมกัน (ได้จากทางใดทางหนึ่งก็ผ่าน) ตั้งค่าที่ จัดการระบบ > ผู้ใช้และสิทธิ์ > กำหนดสิทธิ์
+- บทบาท "ดูอย่างเดียว" แก้ไขไม่ได้ แม้ติ๊กสิทธิ์แก้ไข
